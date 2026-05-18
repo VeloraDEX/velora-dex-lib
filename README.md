@@ -1,0 +1,109 @@
+# velora-dex-lib
+
+Private Go module for ParaSwap/Velora transaction-building and DEX encoding
+logic.
+
+The module currently exposes the Go implementation of the generic V6
+`GenericSwapTransactionBuilder` path, executor bytecode builders, resolved
+transaction encoding, a small DEX encoder registry, and the Tessera DEX encoder.
+
+## Install
+
+For a private GitHub module, configure consumers with:
+
+```bash
+go env -w GOPRIVATE=github.com/VeloraDEX/*
+go env -w GONOSUMDB=github.com/VeloraDEX/*
+```
+
+Then, from the consuming service:
+
+```bash
+go get github.com/VeloraDEX/velora-dex-lib@v0.1.0
+```
+
+Use a version tag in production. During active development a branch or commit
+SHA can be used temporarily.
+
+## Main Packages
+
+- `txbuilder/builder`: public generic swap builder API.
+- `txbuilder/resolved`: resolved build input validation and Augustus V6
+  calldata encoding.
+- `txbuilder/executor`: Executor01/02/03/WETH bytecode builders.
+- `txbuilder/dex/registry`: exact-key DEX encoder registry.
+- `txbuilder/dex/tessera`: in-process Tessera DEX encoder.
+
+## Basic Usage
+
+```go
+package example
+
+import (
+    "context"
+
+    "github.com/VeloraDEX/velora-dex-lib/txbuilder/builder"
+    "github.com/VeloraDEX/velora-dex-lib/txbuilder/dex/registry"
+    "github.com/VeloraDEX/velora-dex-lib/txbuilder/dex/tessera"
+    "github.com/VeloraDEX/velora-dex-lib/txbuilder/executor"
+    "github.com/VeloraDEX/velora-dex-lib/txbuilder/resolved"
+)
+
+func Build(
+    ctx context.Context,
+    req builder.BuildRequest,
+    approvalChecker builder.ApprovalChecker,
+    wethProvider builder.WethCallDataProvider,
+) (resolved.BuildOutput, error) {
+    tesseraEncoder := tessera.New(tessera.DefaultConfig())
+    dexRegistry := registry.MustNew(registry.Entry{
+        Keys:    []string{"tessera", "Tessera"},
+        Encoder: tesseraEncoder,
+    })
+
+    deps := builder.Deps{
+        EncodingContext: resolved.EncodingContext{
+            Network:                   8453,
+            AugustusV6Address:         "0x...",
+            WrappedNativeTokenAddress: "0x4200000000000000000000000000000000000006",
+            ExecutorsAddresses: map[resolved.ExecutorType]resolved.Address{
+                resolved.Executor01:   "0x...",
+                resolved.Executor02:   "0x...",
+                resolved.Executor03:   "0x...",
+                resolved.ExecutorWETH: "0x4200000000000000000000000000000000000006",
+            },
+        },
+        AugustusV6ABI:   resolved.MustLoadAugustusV6ABI(),
+        ExecutorFactory: executor.NewFactory(),
+        DexRegistry:     dexRegistry,
+        ApprovalChecker: approvalChecker,
+        WethProvider:    wethProvider,
+    }
+
+    return builder.BuildGeneric(ctx, req, deps)
+}
+```
+
+`BuildGeneric` returns `resolved.BuildOutput`, whose `TxObject.Data` field is
+the final Augustus V6 transaction calldata.
+
+## Runtime Dependencies
+
+The consuming service must provide:
+
+- network-specific `resolved.EncodingContext`.
+- a `builder.DexRegistry` containing all DEX route labels the service accepts.
+- a production `builder.ApprovalChecker`, typically backed by existing
+  allowance state, Redis, or RPC calls.
+- a `builder.WethCallDataProvider` for routes that need aggregate WETH deposit
+  or withdraw calldata.
+
+## Notes
+
+- DEX registry keys are exact-match aliases. Register both canonical keys and
+  public route labels when they differ.
+- `Options.SkipApprovalCheck` is intended for tests or trusted pre-approved
+  routes. In production, prefer a real `ApprovalChecker`.
+- This module is intended to be imported by Go services. TypeScript parity
+  fixture generation remains in the source `paraswap-dex-lib` repository.
+
