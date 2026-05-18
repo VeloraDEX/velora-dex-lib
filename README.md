@@ -34,6 +34,9 @@ SHA can be used temporarily.
 - `txbuilder/dex/registry`: exact-key DEX encoder registry.
 - `txbuilder/dex/tessera`: in-process Tessera DEX encoder.
 
+See [`docs/TXBUILDER_USAGE.md`](docs/TXBUILDER_USAGE.md) for detailed
+construction, dependency wiring, and runtime integration notes.
+
 ## Basic Usage
 
 ```go
@@ -106,4 +109,3 @@ The consuming service must provide:
   routes. In production, prefer a real `ApprovalChecker`.
 - This module is intended to be imported by Go services. TypeScript parity
   fixture generation remains in the source `paraswap-dex-lib` repository.
-
