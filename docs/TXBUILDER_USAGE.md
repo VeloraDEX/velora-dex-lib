@@ -127,6 +127,12 @@ type ApprovalChecker interface {
 - `true`: already approved, no approve calldata is inserted.
 - `false`: not approved, the builder inserts `approveData` for that leg.
 
+For production Augustus approval checks, use `txbuilder/approvals`. It mirrors
+the TypeScript approval cache identity (`dl_<network>_generic_approves`) and
+checks ERC20 or Permit2 allowances through Multicall3. The package intentionally
+keeps Redis and RPC clients behind interfaces, so consuming services should add
+thin adapters around their existing runtime clients.
+
 For tests or trusted pre-approved routes, set:
 
 ```go
@@ -168,4 +174,3 @@ The consuming service must provide:
   routes. In production, prefer a real `ApprovalChecker`.
 - TypeScript parity fixture generation remains in the source
   `paraswap-dex-lib` repository.
-

@@ -28,6 +28,8 @@ SHA can be used temporarily.
 ## Main Packages
 
 - `txbuilder/builder`: public generic swap builder API.
+- `txbuilder/approvals`: Augustus approval checker with TypeScript-compatible
+  cache keys and Multicall3 allowance reads.
 - `txbuilder/resolved`: resolved build input validation and Augustus V6
   calldata encoding.
 - `txbuilder/executor`: Executor01/02/03/WETH bytecode builders.
@@ -97,7 +99,9 @@ The consuming service must provide:
 - network-specific `resolved.EncodingContext`.
 - a `builder.DexRegistry` containing all DEX route labels the service accepts.
 - a production `builder.ApprovalChecker`, typically backed by existing
-  allowance state, Redis, or RPC calls.
+  allowance state, Redis, or RPC calls. `txbuilder/approvals` provides the
+  reusable Augustus checker; consuming services wire their Redis and RPC clients
+  through its cache and contract-caller interfaces.
 - a `builder.WethCallDataProvider` for routes that need aggregate WETH deposit
   or withdraw calldata.
 
