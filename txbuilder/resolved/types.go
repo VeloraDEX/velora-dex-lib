@@ -128,8 +128,9 @@ type TxObject struct {
 }
 
 type BuildOutput struct {
-	Params   []any    `json:"params"`
-	TxObject TxObject `json:"txObject"`
+	Params       []any        `json:"params"`
+	TxObject     TxObject     `json:"txObject"`
+	ExecutorType ExecutorType `json:"executorType,omitempty"`
 }
 
 type DirectBuildDeps struct {

@@ -11,7 +11,17 @@ import (
 func BuildGeneric(ctx context.Context, req BuildRequest, deps Deps) (resolved.BuildOutput, error) {
 	input, err := buildGenericInput(ctx, req, deps)
 	if err != nil {
-		return resolved.BuildOutput{}, err
+		// Best-effort: surface the executor label even when input
+		// assembly fails, so per-executor failure metrics in the
+		// caller stay accurate. DetectExecutor is pure and cheap;
+		// when it cannot classify the route we leave ExecutorType
+		// empty so the caller can distinguish "unknown route shape"
+		// from "known executor that failed downstream."
+		out := resolved.BuildOutput{}
+		if et, derr := DetectExecutor(req.PriceRoute); derr == nil {
+			out.ExecutorType = et
+		}
+		return out, err
 	}
 
 	return resolved.BuildTransactionFromResolved(input, resolved.BuildDeps{

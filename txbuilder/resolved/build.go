@@ -2,37 +2,48 @@ package resolved
 
 import "fmt"
 
-func BuildTransactionFromResolved(input BuildInput, deps BuildDeps) (BuildOutput, error) {
+func BuildTransactionFromResolved(input BuildInput, deps BuildDeps) (out BuildOutput, err error) {
+	// Surface ExecutorType to the caller even on the error paths
+	// below — observability consumers (per-executor failure counts)
+	// rely on knowing which executor was attempted, not just that
+	// "something failed."
+	out.ExecutorType = input.ExecutorType
+
 	validated, err := validateBuildInput(input, deps)
 	if err != nil {
-		return BuildOutput{}, err
+		return
 	}
 
 	if deps.ExecutorBytecodeBuilderFactory == nil {
-		return BuildOutput{}, fmt.Errorf("executor bytecode builder factory is required")
+		err = fmt.Errorf("executor bytecode builder factory is required")
+		return
 	}
 	if input.ExecutorType == Executor02 &&
 		(input.Side == SideBuy ||
 			input.ContractMethod == ContractMethodSwapExactAmountOut ||
 			input.ContractMethod == ContractMethodSwapExactAmountOutPro) {
-		return BuildOutput{}, fmt.Errorf("Executor02 BUY routes are not implemented in Phase 2c")
+		err = fmt.Errorf("Executor02 BUY routes are not implemented in Phase 2c")
+		return
 	}
 	if input.ExecutorType == Executor03 &&
 		(input.Side != SideBuy ||
 			(input.ContractMethod != ContractMethodSwapExactAmountOut &&
 				input.ContractMethod != ContractMethodSwapExactAmountOutPro)) {
-		return BuildOutput{}, fmt.Errorf("Executor03 non-BUY routes are not implemented in Phase 2d")
+		err = fmt.Errorf("Executor03 non-BUY routes are not implemented in Phase 2d")
+		return
 	}
 
-	bytecodeBuilder, err := deps.ExecutorBytecodeBuilderFactory.CreateExecutorBytecodeBuilder(
+	bytecodeBuilder, berr := deps.ExecutorBytecodeBuilderFactory.CreateExecutorBytecodeBuilder(
 		input.ExecutorType,
 		deps.EncodingContext,
 	)
-	if err != nil {
-		return BuildOutput{}, err
+	if berr != nil {
+		err = berr
+		return
 	}
 	if bytecodeBuilder == nil {
-		return BuildOutput{}, fmt.Errorf("executor bytecode builder is required")
+		err = fmt.Errorf("executor bytecode builder is required")
+		return
 	}
 
 	bytecode, err := bytecodeBuilder.BuildBytecode(ExecutorBytecodeBuildInput{
@@ -47,22 +58,22 @@ func BuildTransactionFromResolved(input BuildInput, deps BuildDeps) (BuildOutput
 		WethPlan:     validated.wethPlan,
 	})
 	if err != nil {
-		return BuildOutput{}, err
+		return
 	}
 
 	params, err := BuildGenericSwapParams(input, validated.fee, string(bytecode))
 	if err != nil {
-		return BuildOutput{}, err
+		return
 	}
 
 	data, err := encodeGenericCalldata(input, validated.fee, bytecode, deps.AugustusV6ABI)
 	if err != nil {
-		return BuildOutput{}, err
+		return
 	}
 
 	value, err := BuildTxValue(input)
 	if err != nil {
-		return BuildOutput{}, err
+		return
 	}
 
 	txObject := TxObject{
@@ -80,8 +91,7 @@ func BuildTransactionFromResolved(input BuildInput, deps BuildDeps) (BuildOutput
 		txObject.MaxPriorityFeePerGas = input.Gas.MaxPriorityFeePerGas
 	}
 
-	return BuildOutput{
-		Params:   params,
-		TxObject: txObject,
-	}, nil
+	out.Params = params
+	out.TxObject = txObject
+	return
 }
