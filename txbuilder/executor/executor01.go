@@ -151,8 +151,8 @@ func (b Executor01Builder) validatePhase2eScope(
 			if err := validateReturnAmountPosOverride("Executor01", exchangeParam.ReturnAmountPos); err != nil {
 				return err
 			}
-			if exchangeParam.InsertFromAmountPos != nil {
-				return fmt.Errorf("Executor01 insertFromAmountPos override is not implemented in Phase 2e")
+			if err := validateInsertFromAmountPosOverride("Executor01", exchangeParam.InsertFromAmountPos); err != nil {
+				return err
 			}
 			if boolValue(exchangeParam.AmountsPacked128) {
 				return fmt.Errorf("Executor01 amountsPacked128 is not implemented in Phase 2e")

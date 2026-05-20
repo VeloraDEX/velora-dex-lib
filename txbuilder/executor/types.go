@@ -11,6 +11,7 @@ const (
 
 	defaultReturnAmountPos      = 255
 	maxReturnAmountPos          = 255
+	maxInsertFromAmountPos      = 65535
 	wrapUnwrapFromAmountPos     = 4
 	erc20TransferAmountPos      = 36
 	approveCalldataDestTokenPos = 68

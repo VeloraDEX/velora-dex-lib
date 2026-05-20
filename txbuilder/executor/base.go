@@ -114,6 +114,20 @@ func validateReturnAmountPosOverride(executorName string, returnAmountPos *int) 
 	return nil
 }
 
+func validateInsertFromAmountPosOverride(executorName string, insertFromAmountPos *int) error {
+	if insertFromAmountPos == nil {
+		return nil
+	}
+	if *insertFromAmountPos < 0 || *insertFromAmountPos > maxInsertFromAmountPos {
+		return fmt.Errorf(
+			"%s insertFromAmountPos must fit in 2 bytes: %d",
+			executorName,
+			*insertFromAmountPos,
+		)
+	}
+	return nil
+}
+
 func buildExecutor0102CallData(
 	tokenAddress resolved.Address,
 	calldata resolved.HexBytes,

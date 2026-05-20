@@ -160,13 +160,179 @@ func TestExecutor0102BuildBytecodeAcceptsReturnAmountPos(t *testing.T) {
 	}
 }
 
+func TestExecutor010203InsertFromAmountPosOverridePacked(t *testing.T) {
+	for _, insertFromAmountPos := range []int{0, 68, maxInsertFromAmountPos} {
+		t.Run(fmt.Sprintf("pos_%d", insertFromAmountPos), func(t *testing.T) {
+			priceRoute, exchangeParams := testExecutorRouteAndParams(0)
+			exchangeParams[0].ReturnAmountPos = nil
+			exchangeParams[0].InsertFromAmountPos = &insertFromAmountPos
+
+			callData, err := NewExecutor01Builder(testEncodingContext()).buildDexCallData(
+				priceRoute,
+				exchangeParams,
+				0,
+				0,
+				0,
+				0,
+				insertFromAmountDontCheckBalanceAfterSwap,
+			)
+			if err != nil {
+				t.Fatalf("Executor01 buildDexCallData() error = %v", err)
+			}
+			assertExecutor0102FromAmountPos(t, callData, insertFromAmountPos)
+
+			callData, err = NewExecutor02Builder(testEncodingContext()).buildDexCallData(
+				priceRoute,
+				0,
+				0,
+				0,
+				exchangeParams,
+				0,
+				insertFromAmountDontCheckBalanceAfterSwap,
+			)
+			if err != nil {
+				t.Fatalf("Executor02 buildDexCallData() error = %v", err)
+			}
+			assertExecutor0102FromAmountPos(t, callData, insertFromAmountPos)
+
+			callData, err = NewExecutor03Builder(testEncodingContext()).buildDexCallData(
+				priceRoute,
+				0,
+				0,
+				0,
+				exchangeParams,
+				0,
+				insertFromAmountDontCheckBalanceAfterSwap,
+				nil,
+			)
+			if err != nil {
+				t.Fatalf("Executor03 buildDexCallData() error = %v", err)
+			}
+			assertExecutor03FromAmountPos(t, callData, insertFromAmountPos)
+			assertExecutor03ToAmountPos(t, callData, 36)
+		})
+	}
+}
+
+func TestExecutor010203InsertFromAmountPosIgnoredWhenFlagDoesNotInsert(t *testing.T) {
+	insertFromAmountPos := 68
+	priceRoute, exchangeParams := testExecutorRouteAndParams(0)
+	exchangeParams[0].ReturnAmountPos = nil
+	exchangeParams[0].InsertFromAmountPos = &insertFromAmountPos
+
+	callData, err := NewExecutor01Builder(testEncodingContext()).buildDexCallData(
+		priceRoute,
+		exchangeParams,
+		0,
+		0,
+		0,
+		0,
+		dontInsertFromAmountDontCheckBalanceAfterSwap,
+	)
+	if err != nil {
+		t.Fatalf("Executor01 buildDexCallData() error = %v", err)
+	}
+	assertExecutor0102FromAmountPos(t, callData, 0)
+
+	callData, err = NewExecutor02Builder(testEncodingContext()).buildDexCallData(
+		priceRoute,
+		0,
+		0,
+		0,
+		exchangeParams,
+		0,
+		dontInsertFromAmountDontCheckBalanceAfterSwap,
+	)
+	if err != nil {
+		t.Fatalf("Executor02 buildDexCallData() error = %v", err)
+	}
+	assertExecutor0102FromAmountPos(t, callData, 0)
+
+	callData, err = NewExecutor03Builder(testEncodingContext()).buildDexCallData(
+		priceRoute,
+		0,
+		0,
+		0,
+		exchangeParams,
+		0,
+		dontInsertFromAmountDontCheckBalanceAfterSwap,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("Executor03 buildDexCallData() error = %v", err)
+	}
+	assertExecutor03FromAmountPos(t, callData, 0)
+	assertExecutor03ToAmountPos(t, callData, 0)
+}
+
+func TestExecutor010203InsertFromAmountPosValidation(t *testing.T) {
+	priceRoute, exchangeParams := testExecutorRouteAndParams(0)
+	exchangeParams[0].ReturnAmountPos = nil
+	maxValid := maxInsertFromAmountPos
+	exchangeParams[0].InsertFromAmountPos = &maxValid
+	orderedLegs, err := getOrderedLegs(testBytecodeBuildInput(priceRoute, exchangeParams))
+	if err != nil {
+		t.Fatalf("getOrderedLegs() error = %v", err)
+	}
+
+	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err != nil {
+		t.Fatalf("Executor01 valid insertFromAmountPos rejected: %v", err)
+	}
+	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err != nil {
+		t.Fatalf("Executor02 valid insertFromAmountPos rejected: %v", err)
+	}
+	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err != nil {
+		t.Fatalf("Executor03 valid insertFromAmountPos rejected: %v", err)
+	}
+
+	invalid := maxInsertFromAmountPos + 1
+	exchangeParams[0].InsertFromAmountPos = &invalid
+	orderedLegs, err = getOrderedLegs(testBytecodeBuildInput(priceRoute, exchangeParams))
+	if err != nil {
+		t.Fatalf("getOrderedLegs() error = %v", err)
+	}
+
+	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err == nil {
+		t.Fatalf("Executor01 accepted out-of-range insertFromAmountPos")
+	}
+	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err == nil {
+		t.Fatalf("Executor02 accepted out-of-range insertFromAmountPos")
+	}
+	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err == nil {
+		t.Fatalf("Executor03 accepted out-of-range insertFromAmountPos")
+	}
+}
+
+func TestExecutor010203BuildBytecodeAcceptsInsertFromAmountPos(t *testing.T) {
+	insertFromAmountPos := 68
+	priceRoute, exchangeParams := testExecutorRouteAndParams(0)
+	exchangeParams[0].ReturnAmountPos = nil
+	exchangeParams[0].InsertFromAmountPos = &insertFromAmountPos
+	input := testBytecodeBuildInput(priceRoute, exchangeParams)
+
+	if _, err := NewExecutor01Builder(testEncodingContext()).BuildBytecode(input); err != nil {
+		t.Fatalf("Executor01 BuildBytecode() error = %v", err)
+	}
+	if _, err := NewExecutor02Builder(testEncodingContext()).BuildBytecode(input); err != nil {
+		t.Fatalf("Executor02 BuildBytecode() error = %v", err)
+	}
+
+	input.ExecutorType = resolved.Executor03
+	input.Context = testEncodingContext()
+	input.RoutePlan.Routes[0].Swaps[0].DestAmount = "456"
+	if _, err := NewExecutor03Builder(testEncodingContext()).BuildBytecode(input); err != nil {
+		t.Fatalf("Executor03 BuildBytecode() error = %v", err)
+	}
+}
+
 func testExecutorRouteAndParams(returnAmountPos int) (executorRoute, []resolved.DexExchangeBuildParam) {
 	srcAmount := resolved.DecimalString("123")
+	destAmount := resolved.DecimalString("456")
 
 	priceRoute := executorRoute{
 		SrcToken:   testSrcToken,
 		DestToken:  testDestToken,
-		DestAmount: "456",
+		DestAmount: destAmount,
 		BestRoute: []resolved.RoutePlanRoute{
 			{
 				Percent: 100,
@@ -175,13 +341,13 @@ func testExecutorRouteAndParams(returnAmountPos int) (executorRoute, []resolved.
 						SrcToken:   testSrcToken,
 						DestToken:  testDestToken,
 						SrcAmount:  srcAmount,
-						DestAmount: "456",
+						DestAmount: destAmount,
 						SwapExchanges: []resolved.RoutePlanSwapExchange{
 							{
 								Exchange:   "test",
 								Percent:    100,
 								SrcAmount:  srcAmount,
-								DestAmount: "456",
+								DestAmount: destAmount,
 							},
 						},
 					},
@@ -194,11 +360,15 @@ func testExecutorRouteAndParams(returnAmountPos int) (executorRoute, []resolved.
 	if err != nil {
 		panic(err)
 	}
+	encodedDestAmount, err := encodeUint256Decimal(destAmount)
+	if err != nil {
+		panic(err)
+	}
 
 	return priceRoute, []resolved.DexExchangeBuildParam{
 		{
 			NeedWrapNative:      resolved.RawBool{Value: true, Valid: true, Present: true},
-			ExchangeData:        resolved.HexBytes("0x12345678" + strip0x(encodedAmount)),
+			ExchangeData:        resolved.HexBytes("0x12345678" + strip0x(encodedAmount) + strip0x(encodedDestAmount)),
 			TargetExchange:      testTargetExchange,
 			DexFuncHasRecipient: true,
 			ReturnAmountPos:     &returnAmountPos,
@@ -262,5 +432,43 @@ func assertExecutor0102ReturnAmountByte(t *testing.T, callData resolved.HexBytes
 	wantHex := fmt.Sprintf("%02x", want)
 	if got != wantHex {
 		t.Fatalf("returnAmountPos byte = %s, want %s\ncallData = %s", got, wantHex, callData)
+	}
+}
+
+func assertExecutor0102FromAmountPos(t *testing.T, callData resolved.HexBytes, want int) {
+	t.Helper()
+
+	const fromAmountPosByteOffset = 24
+	assertPackedUint16(t, callData, fromAmountPosByteOffset, want, "fromAmountPos")
+}
+
+func assertExecutor03ToAmountPos(t *testing.T, callData resolved.HexBytes, want int) {
+	t.Helper()
+
+	const toAmountPosByteOffset = 22
+	assertPackedUint16(t, callData, toAmountPosByteOffset, want, "toAmountPos")
+}
+
+func assertExecutor03FromAmountPos(t *testing.T, callData resolved.HexBytes, want int) {
+	t.Helper()
+
+	const fromAmountPosByteOffset = 24
+	assertPackedUint16(t, callData, fromAmountPosByteOffset, want, "fromAmountPos")
+}
+
+func assertPackedUint16(t *testing.T, callData resolved.HexBytes, byteOffset int, want int, field string) {
+	t.Helper()
+
+	raw := strip0x(string(callData))
+	start := byteOffset * 2
+	end := start + 4
+	if len(raw) < end {
+		t.Fatalf("callData too short: %s", callData)
+	}
+
+	got := raw[start:end]
+	wantHex := fmt.Sprintf("%04x", want)
+	if got != wantHex {
+		t.Fatalf("%s = %s, want %s\ncallData = %s", field, got, wantHex, callData)
 	}
 }
