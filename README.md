@@ -5,7 +5,8 @@ logic.
 
 The module currently exposes the Go implementation of the generic V6
 `GenericSwapTransactionBuilder` path, executor bytecode builders, resolved
-transaction encoding, a small DEX encoder registry, and the Tessera DEX encoder.
+transaction encoding, a small DEX encoder registry, and Augustus approval
+checking helpers.
 
 ## Install
 
@@ -34,7 +35,6 @@ SHA can be used temporarily.
   calldata encoding.
 - `txbuilder/executor`: Executor01/02/03/WETH bytecode builders.
 - `txbuilder/dex/registry`: exact-key DEX encoder registry.
-- `txbuilder/dex/tessera`: in-process Tessera DEX encoder.
 
 See [`docs/TXBUILDER_USAGE.md`](docs/TXBUILDER_USAGE.md) for detailed
 construction, dependency wiring, and runtime integration notes.
@@ -48,8 +48,6 @@ import (
     "context"
 
     "github.com/VeloraDEX/velora-dex-lib/txbuilder/builder"
-    "github.com/VeloraDEX/velora-dex-lib/txbuilder/dex/registry"
-    "github.com/VeloraDEX/velora-dex-lib/txbuilder/dex/tessera"
     "github.com/VeloraDEX/velora-dex-lib/txbuilder/executor"
     "github.com/VeloraDEX/velora-dex-lib/txbuilder/resolved"
 )
@@ -57,15 +55,10 @@ import (
 func Build(
     ctx context.Context,
     req builder.BuildRequest,
+    dexRegistry builder.DexRegistry,
     approvalChecker builder.ApprovalChecker,
     wethProvider builder.WethCallDataProvider,
 ) (resolved.BuildOutput, error) {
-    tesseraEncoder := tessera.New(tessera.DefaultConfig())
-    dexRegistry := registry.MustNew(registry.Entry{
-        Keys:    []string{"tessera", "Tessera"},
-        Encoder: tesseraEncoder,
-    })
-
     deps := builder.Deps{
         EncodingContext: resolved.EncodingContext{
             Network:                   8453,

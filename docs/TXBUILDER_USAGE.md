@@ -102,11 +102,12 @@ leg. `GetDexParam` returns the DEX calldata and executor metadata for that leg.
 For simple alias-based registration:
 
 ```go
-tesseraEncoder := tessera.New(tessera.DefaultConfig())
-dexRegistry := registry.MustNew(registry.Entry{
-    Keys:    []string{"tessera", "Tessera"},
-    Encoder: tesseraEncoder,
-})
+dexRegistry := registry.MustNew(
+    registry.Entry{
+        Keys:    []string{"my-dex", "MyDex"},
+        Encoder: myDexEncoder,
+    },
+)
 ```
 
 The registry performs exact key matching. Register every route label or alias
