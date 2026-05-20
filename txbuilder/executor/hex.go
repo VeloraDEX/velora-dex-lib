@@ -93,6 +93,24 @@ func encodeNegativeInt256Decimal(value resolved.DecimalString) (string, error) {
 	return leftPadBig(encoded, 32)
 }
 
+func encodeUint128Decimal(value resolved.DecimalString) (string, error) {
+	parsed, ok := new(big.Int).SetString(string(value), 10)
+	if !ok || parsed.Sign() < 0 {
+		return "", fmt.Errorf("amount must be a non-negative decimal integer: %s", value)
+	}
+	return leftPadBig(parsed, 16)
+}
+
+func encodeNegativeInt128Decimal(value resolved.DecimalString) (string, error) {
+	parsed, ok := new(big.Int).SetString(string(value), 10)
+	if !ok || parsed.Sign() < 0 {
+		return "", fmt.Errorf("amount must be a non-negative decimal integer: %s", value)
+	}
+	modulus := new(big.Int).Lsh(big.NewInt(1), 128)
+	encoded := new(big.Int).Sub(modulus, parsed)
+	return leftPadBig(encoded, 16)
+}
+
 func zeroBytes(width int) string {
 	return "0x" + strings.Repeat("00", width)
 }

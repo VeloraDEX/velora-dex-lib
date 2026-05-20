@@ -171,11 +171,11 @@ func (b Executor02Builder) validatePhase2cScope(
 		if exchangeParam.WethAddress != nil {
 			return fmt.Errorf("Executor02 custom wethAddress is not implemented in Phase 2c")
 		}
-		if exchangeParam.TransferSrcTokenBeforeSwap != nil {
-			return fmt.Errorf("Executor02 transferSrcTokenBeforeSwap calldata is not implemented in Phase 2c")
-		}
 		if exchangeParam.Spender != nil {
-			return fmt.Errorf("Executor02 spender override is not implemented in Phase 2c")
+			if exchangeParam.ApproveData == nil &&
+				!boolValue(exchangeParam.SkipApproval) {
+				return fmt.Errorf("Executor02 spender requires approveData or skipApproval after approval planning")
+			}
 		}
 		if err := validateReturnAmountPosOverride("Executor02", exchangeParam.ReturnAmountPos); err != nil {
 			return err
@@ -185,15 +185,6 @@ func (b Executor02Builder) validatePhase2cScope(
 		}
 		if boolValue(exchangeParam.AmountsPacked128) {
 			return fmt.Errorf("Executor02 amountsPacked128 is not implemented in Phase 2c")
-		}
-		if boolValue(exchangeParam.Permit2Approval) {
-			return fmt.Errorf("Executor02 permit2Approval is not implemented in Phase 2c")
-		}
-		if boolValue(exchangeParam.SkipApproval) {
-			return fmt.Errorf("Executor02 skipApproval is not implemented in Phase 2c")
-		}
-		if exchangeParam.ApproveData != nil {
-			return fmt.Errorf("Executor02 approve calldata is not implemented in Phase 2c")
 		}
 		if err := validateSpecialDexFlagOverride("Executor02", exchangeParam.SpecialDexFlag); err != nil {
 			return err
@@ -586,9 +577,8 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 		return "", fmt.Errorf("missing exchange param for route position %d:%d:%d", routeIndex, swapIndex, swapExchangeIndex)
 	}
 	curExchangeParam := exchangeParams[exchangeParamIndex]
-	// Phase 2c scope guards reject NeedUnwrapNative, custom WETH, transfer
-	// before swap, and approvals. Restore the corresponding TS branches when
-	// those guards are relaxed in a later phase.
+	// Phase 2c scope guards still reject NeedUnwrapNative and custom WETH.
+	// Restore those TS branches when the guards relax.
 
 	dexCallData, err := b.buildDexCallData(
 		priceRoute,
@@ -606,7 +596,67 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 	swapExchangeCallData := dexCallData
 	isLastSwap := swapIndex == len(priceRoute.BestRoute[routeIndex].Swaps)-1
 
+	if curExchangeParam.TransferSrcTokenBeforeSwap != nil {
+		transferCallData, err := buildERC20TransferCalldata(
+			*curExchangeParam.TransferSrcTokenBeforeSwap,
+			swapExchange.SrcAmount,
+		)
+		if err != nil {
+			return "", err
+		}
+		tokenAddress := resolved.Address(lowerHex(string(swap.SrcToken)))
+		if isETHAddress(swap.SrcToken) {
+			tokenAddress = getWETHAddress(curExchangeParam, b.context)
+		}
+		wrappedTransferCallData, err := buildTransferCallData(transferCallData, tokenAddress)
+		if err != nil {
+			return "", err
+		}
+		swapExchangeCallData, err = concatHex(string(wrappedTransferCallData), string(swapExchangeCallData))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if !isETHAddress(swap.SrcToken) &&
+		curExchangeParam.TransferSrcTokenBeforeSwap == nil &&
+		!boolValue(curExchangeParam.SkipApproval) &&
+		curExchangeParam.ApproveData != nil {
+		approveCallData, err := buildApproveCallData(
+			b.context,
+			curExchangeParam.ApproveData.Target,
+			curExchangeParam.ApproveData.Token,
+			flags.approves[exchangeParamIndex],
+			boolValue(curExchangeParam.Permit2Approval),
+			maxUint,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapExchangeCallData, err = concatHex(string(approveCallData), string(swapExchangeCallData))
+		if err != nil {
+			return "", err
+		}
+	}
+
 	if curExchangeParam.NeedWrapNative.Value && isETHAddress(swap.SrcToken) {
+		approveWethCallData := resolved.HexBytes("0x")
+		if curExchangeParam.ApproveData != nil &&
+			curExchangeParam.TransferSrcTokenBeforeSwap == nil &&
+			!boolValue(curExchangeParam.SkipApproval) {
+			approveWethCallData, err = buildApproveCallData(
+				b.context,
+				curExchangeParam.ApproveData.Target,
+				curExchangeParam.ApproveData.Token,
+				flags.approves[exchangeParamIndex],
+				boolValue(curExchangeParam.Permit2Approval),
+				maxUint,
+			)
+			if err != nil {
+				return "", err
+			}
+		}
+
 		isNotFirstSwap := swapIndex != 0
 		skipWrap := false
 		if isNotFirstSwap {
@@ -639,7 +689,11 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 			addedWrapToSwapExchangeMap[mapKey] = true
 		}
 
-		swapExchangeCallData, err = concatHex(string(depositCallData), string(swapExchangeCallData))
+		swapExchangeCallData, err = concatHex(
+			string(approveWethCallData),
+			string(depositCallData),
+			string(swapExchangeCallData),
+		)
 		if err != nil {
 			return "", err
 		}

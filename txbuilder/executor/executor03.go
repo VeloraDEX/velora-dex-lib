@@ -109,29 +109,17 @@ func (b Executor03Builder) validatePhase2dScope(
 		if exchangeParam.WethAddress != nil {
 			return fmt.Errorf("Executor03 custom wethAddress is not implemented in Phase 2d")
 		}
-		if exchangeParam.TransferSrcTokenBeforeSwap != nil {
-			return fmt.Errorf("Executor03 transferSrcTokenBeforeSwap calldata is not implemented in Phase 2d")
-		}
 		if exchangeParam.Spender != nil {
-			return fmt.Errorf("Executor03 spender override is not implemented in Phase 2d")
+			if exchangeParam.ApproveData == nil &&
+				!boolValue(exchangeParam.SkipApproval) {
+				return fmt.Errorf("Executor03 spender requires approveData or skipApproval after approval planning")
+			}
 		}
 		if exchangeParam.ReturnAmountPos != nil {
 			return fmt.Errorf("Executor03 returnAmountPos override requires contract-compatible mapping to toAmountPos metadata")
 		}
 		if err := validateInsertFromAmountPosOverride("Executor03", exchangeParam.InsertFromAmountPos); err != nil {
 			return err
-		}
-		if boolValue(exchangeParam.AmountsPacked128) {
-			return fmt.Errorf("Executor03 amountsPacked128 is not implemented in Phase 2d")
-		}
-		if boolValue(exchangeParam.Permit2Approval) {
-			return fmt.Errorf("Executor03 permit2Approval is not implemented in Phase 2d")
-		}
-		if boolValue(exchangeParam.SkipApproval) {
-			return fmt.Errorf("Executor03 skipApproval is not implemented in Phase 2d")
-		}
-		if exchangeParam.ApproveData != nil {
-			return fmt.Errorf("Executor03 approve calldata is not implemented in Phase 2d")
 		}
 		if err := validateSpecialDexFlagOverride("Executor03", exchangeParam.SpecialDexFlag); err != nil {
 			return err
@@ -307,16 +295,71 @@ func (b Executor03Builder) buildSingleSwapCallData(
 		(isWETHAddress(swap.SrcToken, b.context) || isWETHAddress(swap.DestToken, b.context)) {
 		return "", fmt.Errorf("Executor03 needUnwrapNative calldata is not implemented in Phase 2d")
 	}
+
 	if curExchangeParam.TransferSrcTokenBeforeSwap != nil {
-		return "", fmt.Errorf("Executor03 transferSrcTokenBeforeSwap calldata is not implemented in Phase 2d")
+		transferCallData, err := buildERC20TransferCalldata(
+			*curExchangeParam.TransferSrcTokenBeforeSwap,
+			swap.SwapExchanges[0].SrcAmount,
+		)
+		if err != nil {
+			return "", err
+		}
+		tokenAddress := resolved.Address(lowerHex(string(swap.SrcToken)))
+		if isETHAddress(swap.SrcToken) {
+			tokenAddress = getWETHAddress(curExchangeParam, b.context)
+		}
+		wrappedTransferCallData, err := buildExecutor03TransferCallData(transferCallData, tokenAddress)
+		if err != nil {
+			return "", err
+		}
+		swapCallData, err = concatHex(string(wrappedTransferCallData), string(swapCallData))
+		if err != nil {
+			return "", err
+		}
 	}
-	if curExchangeParam.ApproveData != nil || boolValue(curExchangeParam.Permit2Approval) {
-		return "", fmt.Errorf("Executor03 approve calldata is not implemented in Phase 2d")
+
+	if int(flags.dexes[index])%4 != 1 &&
+		!isETHAddress(swap.SrcToken) &&
+		!boolValue(curExchangeParam.SkipApproval) &&
+		curExchangeParam.ApproveData != nil &&
+		curExchangeParam.TransferSrcTokenBeforeSwap == nil {
+		approveCallData, err := buildExecutor03ApproveCallData(
+			b.context,
+			curExchangeParam.ApproveData.Target,
+			curExchangeParam.ApproveData.Token,
+			flags.approves[index],
+			boolValue(curExchangeParam.Permit2Approval),
+			maxUint,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapCallData, err = concatHex(string(approveCallData), string(swapCallData))
+		if err != nil {
+			return "", err
+		}
 	}
+
 	if maybeWethCallData != nil &&
 		maybeWethCallData.Deposit != nil &&
 		curExchangeParam.NeedWrapNative.Value &&
 		isETHAddress(swap.SrcToken) {
+		approveWethCallData := resolved.HexBytes("0x")
+		if curExchangeParam.ApproveData != nil &&
+			!boolValue(curExchangeParam.SkipApproval) &&
+			curExchangeParam.TransferSrcTokenBeforeSwap == nil {
+			approveWethCallData, err = buildExecutor03ApproveCallData(
+				b.context,
+				curExchangeParam.ApproveData.Target,
+				curExchangeParam.ApproveData.Token,
+				flags.approves[index],
+				boolValue(curExchangeParam.Permit2Approval),
+				maxUint,
+			)
+			if err != nil {
+				return "", err
+			}
+		}
 		depositCallData, err := buildExecutor03WrapEthCallData(
 			getWETHAddress(curExchangeParam, b.context),
 			maybeWethCallData.Deposit.Calldata,
@@ -326,7 +369,11 @@ func (b Executor03Builder) buildSingleSwapCallData(
 		if err != nil {
 			return "", err
 		}
-		swapCallData, err = concatHex(string(depositCallData), string(swapCallData))
+		swapCallData, err = concatHex(
+			string(approveWethCallData),
+			string(depositCallData),
+			string(swapCallData),
+		)
 		if err != nil {
 			return "", err
 		}
@@ -432,6 +479,7 @@ func (b Executor03Builder) buildDexCallData(
 			fromAmountPos, err = b.findAmountPosWithFallback(
 				exchangeData,
 				swapExchange.SrcAmount,
+				boolValue(exchangeParam.AmountsPacked128),
 			)
 			if err != nil {
 				return "", err
@@ -440,6 +488,7 @@ func (b Executor03Builder) buildDexCallData(
 		toAmountPos, err = b.findAmountPosWithFallback(
 			exchangeData,
 			swapExchange.DestAmount,
+			boolValue(exchangeParam.AmountsPacked128),
 		)
 		if err != nil {
 			return "", err
@@ -451,13 +500,18 @@ func (b Executor03Builder) buildDexCallData(
 		specialFlag = specialDex(*exchangeParam.SpecialDexFlag)
 	}
 
+	finalFlag := dexFlag
+	if boolValue(exchangeParam.AmountsPacked128) {
+		finalFlag = flag(int(dexFlag) | 0x8000)
+	}
+
 	return buildExecutor03CallData(
 		exchangeParam.TargetExchange,
 		exchangeData,
 		fromAmountPos,
 		tokenBalanceCheckPos,
 		specialFlag,
-		dexFlag,
+		finalFlag,
 		toAmountPos,
 	)
 }
@@ -465,7 +519,12 @@ func (b Executor03Builder) buildDexCallData(
 func (b Executor03Builder) findAmountPosWithFallback(
 	exchangeData resolved.HexBytes,
 	amount resolved.DecimalString,
+	is128 bool,
 ) (int, error) {
+	if is128 {
+		return findAmount128PosInCalldata(exchangeData, amount)
+	}
+
 	positiveEncoded, err := encodeUint256Decimal(amount)
 	if err != nil {
 		return 0, err

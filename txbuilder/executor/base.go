@@ -312,6 +312,46 @@ func findAmountPosInCalldata(exchangeData resolved.HexBytes, encodedAmount strin
 	return amountIndex / 2
 }
 
+func findAmount128PosInCalldata(exchangeData resolved.HexBytes, amount resolved.DecimalString) (int, error) {
+	positiveEncoded, err := encodeUint128Decimal(amount)
+	if err != nil {
+		return 0, err
+	}
+
+	idx := findByteAligned(strip0x(string(exchangeData)), strip0x(positiveEncoded))
+	if idx == -1 {
+		negativeEncoded, err := encodeNegativeInt128Decimal(amount)
+		if err != nil {
+			return 0, err
+		}
+		idx = findByteAligned(strip0x(string(exchangeData)), strip0x(negativeEncoded))
+	}
+
+	if idx != -1 {
+		slotPos := idx/2 - 16
+		if slotPos >= 0 {
+			return slotPos, nil
+		}
+	}
+
+	return len(string(exchangeData)) / 2, nil
+}
+
+func findByteAligned(rawCalldata string, pattern string) int {
+	for searchStart := 0; searchStart < len(rawCalldata); {
+		relativeIndex := strings.Index(rawCalldata[searchStart:], pattern)
+		if relativeIndex == -1 {
+			return -1
+		}
+		idx := searchStart + relativeIndex
+		if idx%2 == 0 {
+			return idx
+		}
+		searchStart = idx + 1
+	}
+	return -1
+}
+
 func addTokenAddressToCallData(
 	callData resolved.HexBytes,
 	tokenAddress resolved.Address,
@@ -412,6 +452,25 @@ func buildTransferCallData(
 		specialDexDefault,
 		insertFromAmountDontCheckBalanceAfterSwap,
 		defaultReturnAmountPos,
+	)
+}
+
+func buildExecutor03TransferCallData(
+	transferCallData resolved.HexBytes,
+	tokenAddress resolved.Address,
+) (resolved.HexBytes, error) {
+	transferLength, err := hexDataLength(string(transferCallData))
+	if err != nil {
+		return "", err
+	}
+	return buildExecutor03CallData(
+		tokenAddress,
+		transferCallData,
+		erc20TransferAmountPos,
+		0,
+		specialDexDefault,
+		insertFromAmountDontCheckBalanceAfterSwap,
+		transferLength,
 	)
 }
 
@@ -532,6 +591,137 @@ func buildPermit2CallData(
 		specialDexDefault,
 		dexFlag,
 		defaultReturnAmountPos,
+	)
+	if err != nil {
+		return "", err
+	}
+	if int(dexFlag)%3 == 2 {
+		permit2Calldata, err = concatHex(string(permit2Calldata), zeroBytes(12), string(tokenAddress))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return concatHex(string(approvalCalldata), string(permit2Calldata))
+}
+
+func buildExecutor03ApproveCallData(
+	context resolved.EncodingContext,
+	spender resolved.Address,
+	tokenAddress resolved.Address,
+	dexFlag flag,
+	permit2 bool,
+	amount resolved.DecimalString,
+) (resolved.HexBytes, error) {
+	if permit2 {
+		return buildExecutor03Permit2CallData(context, spender, tokenAddress, dexFlag)
+	}
+
+	approveCalldata, err := buildERC20ApproveCalldata(spender, amount)
+	if err != nil {
+		return "", err
+	}
+	if int(dexFlag)%3 == 2 {
+		approveCalldata, err = concatHex(string(approveCalldata), zeroBytes(12), string(tokenAddress))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	approvalCalldata, err := buildExecutor03CallData(
+		tokenAddress,
+		approveCalldata,
+		0,
+		approveCalldataDestTokenPos,
+		specialDexDefault,
+		dexFlag,
+		0,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if amount != "0" && isDisabledMaxUnitApprovalToken(context.Network, tokenAddress) {
+		resetCalldata, err := buildExecutor03ApproveCallData(
+			context,
+			spender,
+			tokenAddress,
+			dontInsertFromAmountDontCheckBalanceAfterSwap,
+			false,
+			resolved.DecimalString("0"),
+		)
+		if err != nil {
+			return "", err
+		}
+		return concatHex(string(resetCalldata), string(approvalCalldata))
+	}
+
+	return approvalCalldata, nil
+}
+
+func buildExecutor03Permit2CallData(
+	context resolved.EncodingContext,
+	spender resolved.Address,
+	tokenAddress resolved.Address,
+	dexFlag flag,
+) (resolved.HexBytes, error) {
+	approveData, err := buildERC20ApproveCalldata(resolved.Address(permit2Address), maxUint)
+	if err != nil {
+		return "", err
+	}
+	approvalCalldata, err := buildExecutor03CallData(
+		tokenAddress,
+		approveData,
+		0,
+		approveCalldataDestTokenPos,
+		specialDexDefault,
+		dontInsertFromAmountDontCheckBalanceAfterSwap,
+		0,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if isDisabledMaxUnitApprovalToken(context.Network, tokenAddress) {
+		resetApprove, err := buildERC20ApproveCalldata(resolved.Address(permit2Address), "0")
+		if err != nil {
+			return "", err
+		}
+		resetCalldata, err := buildExecutor03CallData(
+			tokenAddress,
+			resetApprove,
+			0,
+			approveCalldataDestTokenPos,
+			specialDexDefault,
+			dontInsertFromAmountDontCheckBalanceAfterSwap,
+			0,
+		)
+		if err != nil {
+			return "", err
+		}
+		approvalCalldata, err = concatHex(string(resetCalldata), string(approvalCalldata))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	permit2Data, err := buildPermit2ApproveCalldata(
+		tokenAddress,
+		spender,
+		maxUint160,
+		maxUint48,
+	)
+	if err != nil {
+		return "", err
+	}
+	permit2Calldata, err := buildExecutor03CallData(
+		resolved.Address(permit2Address),
+		permit2Data,
+		0,
+		approveCalldataDestTokenPos,
+		specialDexDefault,
+		dexFlag,
+		0,
 	)
 	if err != nil {
 		return "", err
