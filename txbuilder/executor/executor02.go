@@ -177,15 +177,6 @@ func (b Executor02Builder) validatePhase2cScope(
 		if exchangeParam.Spender != nil {
 			return fmt.Errorf("Executor02 spender override is not implemented in Phase 2c")
 		}
-		if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) {
-			return fmt.Errorf("Executor02 sendEthButSupportsInsertFromAmount is not implemented in Phase 2c")
-		}
-		if exchangeParam.SpecialDexSupportsInsertFromAmount != nil {
-			return fmt.Errorf("Executor02 special-dex insert support is not implemented in Phase 2c")
-		}
-		if boolValue(exchangeParam.SwappedAmountNotPresentInExchangeData) {
-			return fmt.Errorf("Executor02 swappedAmountNotPresentInExchangeData is not implemented in Phase 2c")
-		}
 		if err := validateReturnAmountPosOverride("Executor02", exchangeParam.ReturnAmountPos); err != nil {
 			return err
 		}
@@ -204,8 +195,8 @@ func (b Executor02Builder) validatePhase2cScope(
 		if exchangeParam.ApproveData != nil {
 			return fmt.Errorf("Executor02 approve calldata is not implemented in Phase 2c")
 		}
-		if exchangeParam.SpecialDexFlag != nil && *exchangeParam.SpecialDexFlag != int(specialDexDefault) {
-			return fmt.Errorf("Executor02 specialDexFlag is not implemented in Phase 2c")
+		if err := validateSpecialDexFlagOverride("Executor02", exchangeParam.SpecialDexFlag); err != nil {
+			return err
 		}
 		if !exchangeParam.DexFuncHasRecipient {
 			routePosition, ok := routePositionForExchangeParamIndex(priceRoute, index)
@@ -291,6 +282,13 @@ func (b Executor02Builder) buildSimpleSwapFlags(
 	isEthDest := isETHAddress(swap.DestToken)
 	exchangeParam := exchangeParams[exchangeParamIndex]
 
+	isWETHSrc := boolValue(exchangeParam.NeedUnwrapNative) && isWETHAddress(swap.SrcToken, b.context)
+	isWETHDest := boolValue(exchangeParam.NeedUnwrapNative) && isWETHAddress(swap.DestToken, b.context)
+	isSpecialDex := exchangeParam.SpecialDexFlag != nil &&
+		*exchangeParam.SpecialDexFlag != int(specialDexDefault)
+	forcePreventInsertFromAmount :=
+		boolValue(exchangeParam.SwappedAmountNotPresentInExchangeData) ||
+			(isSpecialDex && !boolValue(exchangeParam.SpecialDexSupportsInsertFromAmount))
 	needWrap := exchangeParam.NeedWrapNative.Value &&
 		isEthSrc &&
 		maybeWethCallData != nil &&
@@ -301,17 +299,44 @@ func (b Executor02Builder) buildSimpleSwapFlags(
 		maybeWethCallData.Withdraw != nil
 
 	dexFlag := insertFromAmountDontCheckBalanceAfterSwap
+	if forcePreventInsertFromAmount {
+		dexFlag = dontInsertFromAmountDontCheckBalanceAfterSwap
+	}
 	approveFlag := dontInsertFromAmountDontCheckBalanceAfterSwap
 	if isEthSrc && !needWrap {
 		if exchangeParam.DexFuncHasRecipient {
-			dexFlag = sendEthEqualToFromAmountDontCheckBalanceAfterSwap
+			if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) {
+				dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountDontCheckBalanceAfterSwap
+			} else {
+				dexFlag = sendEthEqualToFromAmountDontCheckBalanceAfterSwap
+			}
+		} else if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) {
+			dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountCheckSrcTokenBalanceAfterSwap
 		} else {
 			dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
 		}
 	} else if isEthDest && !needUnwrap {
-		dexFlag = insertFromAmountCheckEthBalanceAfterSwap
+		if forcePreventInsertFromAmount {
+			dexFlag = dontInsertFromAmountCheckEthBalanceAfterSwap
+		} else {
+			dexFlag = insertFromAmountCheckEthBalanceAfterSwap
+		}
 	} else if !exchangeParam.DexFuncHasRecipient || (isEthDest && needUnwrap) {
-		dexFlag = insertFromAmountCheckSrcTokenBalanceAfterSwap
+		if forcePreventInsertFromAmount {
+			dexFlag = dontInsertFromAmountCheckSrcTokenBalanceAfterSwap
+		} else {
+			dexFlag = insertFromAmountCheckSrcTokenBalanceAfterSwap
+		}
+	}
+
+	if isWETHSrc {
+		dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+	} else if isWETHDest {
+		if forcePreventInsertFromAmount {
+			dexFlag = dontInsertFromAmountCheckEthBalanceAfterSwap
+		} else {
+			dexFlag = insertFromAmountCheckEthBalanceAfterSwap
+		}
 	}
 
 	return dexFlag, approveFlag, nil
@@ -337,6 +362,13 @@ func (b Executor02Builder) buildMultiMegaSwapFlags(
 
 	isEthSrc := isETHAddress(swap.SrcToken)
 	isEthDest := isETHAddress(swap.DestToken)
+	isWETHSrc := boolValue(exchangeParam.NeedUnwrapNative) && isWETHAddress(swap.SrcToken, b.context)
+	isWETHDest := boolValue(exchangeParam.NeedUnwrapNative) && isWETHAddress(swap.DestToken, b.context)
+	isSpecialDex := exchangeParam.SpecialDexFlag != nil &&
+		*exchangeParam.SpecialDexFlag != int(specialDexDefault)
+	forcePreventInsertFromAmount :=
+		boolValue(exchangeParam.SwappedAmountNotPresentInExchangeData) ||
+			(isSpecialDex && !boolValue(exchangeParam.SpecialDexSupportsInsertFromAmount))
 	needUnwrap := exchangeParam.NeedWrapNative.Value &&
 		isEthDest &&
 		maybeWethCallData != nil &&
@@ -357,7 +389,9 @@ func (b Executor02Builder) buildMultiMegaSwapFlags(
 		exchangeParamIndex,
 	)
 
-	forceBalanceOfCheck := !exchangeParam.DexFuncHasRecipient
+	forceBalanceOfCheck :=
+		(isSpecialDex && isHorizontalSequence && !applyVerticalBranching && !isLastSwap) ||
+			!exchangeParam.DexFuncHasRecipient
 	needCheckSrcTokenBalanceOf :=
 		(needUnwrap &&
 			(!applyVerticalBranching ||
@@ -368,24 +402,59 @@ func (b Executor02Builder) buildMultiMegaSwapFlags(
 	dexFlag := insertFromAmountDontCheckBalanceAfterSwap
 	approveFlag := dontInsertFromAmountDontCheckBalanceAfterSwap
 	if needSendEth {
+		preventInsertForSendEth :=
+			forcePreventInsertFromAmount ||
+				!boolValue(exchangeParam.SendEthButSupportsInsertFromAmount)
 		if needCheckSrcTokenBalanceOf || forceBalanceOfCheck {
-			dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+			if preventInsertForSendEth {
+				dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+			} else {
+				dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountCheckSrcTokenBalanceAfterSwap
+			}
 		} else if exchangeParam.DexFuncHasRecipient {
-			dexFlag = sendEthEqualToFromAmountDontCheckBalanceAfterSwap
-		} else {
+			if preventInsertForSendEth {
+				dexFlag = sendEthEqualToFromAmountDontCheckBalanceAfterSwap
+			} else {
+				dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountDontCheckBalanceAfterSwap
+			}
+		} else if preventInsertForSendEth {
 			dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+		} else {
+			dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountCheckSrcTokenBalanceAfterSwap
 		}
 	} else if needCheckEthBalance {
 		if needCheckSrcTokenBalanceOf || forceBalanceOfCheck {
-			dexFlag = insertFromAmountCheckEthBalanceAfterSwap
+			if forcePreventInsertFromAmount && exchangeParam.DexFuncHasRecipient {
+				dexFlag = dontInsertFromAmountCheckEthBalanceAfterSwap
+			} else {
+				dexFlag = insertFromAmountCheckEthBalanceAfterSwap
+			}
+		} else if forcePreventInsertFromAmount && exchangeParam.DexFuncHasRecipient {
+			dexFlag = dontInsertFromAmountDontCheckBalanceAfterSwap
 		} else {
 			dexFlag = insertFromAmountDontCheckBalanceAfterSwap
 		}
 	} else {
 		if needCheckSrcTokenBalanceOf || forceBalanceOfCheck {
-			dexFlag = insertFromAmountCheckSrcTokenBalanceAfterSwap
+			if forcePreventInsertFromAmount {
+				dexFlag = dontInsertFromAmountCheckSrcTokenBalanceAfterSwap
+			} else {
+				dexFlag = insertFromAmountCheckSrcTokenBalanceAfterSwap
+			}
+		} else if forcePreventInsertFromAmount {
+			dexFlag = dontInsertFromAmountDontCheckBalanceAfterSwap
 		} else {
 			dexFlag = insertFromAmountDontCheckBalanceAfterSwap
+		}
+	}
+
+	if isWETHSrc {
+		dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+	} else if isWETHDest {
+		if forcePreventInsertFromAmount {
+			dexFlag = dontInsertFromAmountCheckEthBalanceAfterSwap
+		} else {
+			dexFlag = insertFromAmountCheckEthBalanceAfterSwap
 		}
 	}
 

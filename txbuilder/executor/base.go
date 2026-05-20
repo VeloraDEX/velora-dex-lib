@@ -128,6 +128,30 @@ func validateInsertFromAmountPosOverride(executorName string, insertFromAmountPo
 	return nil
 }
 
+func validateSpecialDexFlagOverride(executorName string, specialDexFlag *int) error {
+	if specialDexFlag == nil || *specialDexFlag == int(specialDexDefault) {
+		return nil
+	}
+
+	flag := specialDex(*specialDexFlag)
+	switch flag {
+	case specialDexSwapOnSwaapV2Single,
+		specialDexSwapOnBalancerV1,
+		specialDexSwapOnMakerPSM,
+		specialDexSwapOnBalancerV2,
+		specialDexSwapOnUniswapV2Fork,
+		specialDexSwapOnDystopiaUniswapV2Fork,
+		specialDexSwapOnDystopiaUniswapV2ForkWithFee,
+		specialDexSwapOnAugustusRFQ,
+		specialDexBuyOnSolidlyV3,
+		specialDexSwapOnDexalot,
+		specialDexSwapOnHashflow:
+		return nil
+	default:
+		return fmt.Errorf("%s specialDexFlag is not supported: %d", executorName, *specialDexFlag)
+	}
+}
+
 func buildExecutor0102CallData(
 	tokenAddress resolved.Address,
 	calldata resolved.HexBytes,

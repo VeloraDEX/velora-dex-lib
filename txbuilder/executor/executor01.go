@@ -141,15 +141,6 @@ func (b Executor01Builder) validatePhase2eScope(
 				!boolValue(exchangeParam.SkipApproval) {
 				return fmt.Errorf("Executor01 spender requires approveData or skipApproval after approval planning")
 			}
-			if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) {
-				return fmt.Errorf("Executor01 sendEthButSupportsInsertFromAmount is not implemented in Phase 2e")
-			}
-			if exchangeParam.SpecialDexSupportsInsertFromAmount != nil {
-				return fmt.Errorf("Executor01 special-dex insert support is not implemented in Phase 2e")
-			}
-			if boolValue(exchangeParam.SwappedAmountNotPresentInExchangeData) {
-				return fmt.Errorf("Executor01 swappedAmountNotPresentInExchangeData is not implemented in Phase 2e")
-			}
 			if err := validateReturnAmountPosOverride("Executor01", exchangeParam.ReturnAmountPos); err != nil {
 				return err
 			}
@@ -159,8 +150,8 @@ func (b Executor01Builder) validatePhase2eScope(
 			if boolValue(exchangeParam.AmountsPacked128) {
 				return fmt.Errorf("Executor01 amountsPacked128 is not implemented in Phase 2e")
 			}
-			if exchangeParam.SpecialDexFlag != nil && *exchangeParam.SpecialDexFlag != int(specialDexDefault) {
-				return fmt.Errorf("Executor01 specialDexFlag is not implemented in Phase 2e")
+			if err := validateSpecialDexFlagOverride("Executor01", exchangeParam.SpecialDexFlag); err != nil {
+				return err
 			}
 
 			exchangeParamIndex++
