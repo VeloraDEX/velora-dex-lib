@@ -341,7 +341,7 @@ func addDexExchangeApproveParams(
 	}
 
 	if len(approvalRequests) == 0 {
-		return resolvedLegs, nil
+		return applyDexExchangeApprovalDecisions(resolvedLegs, approvalRequests, approvalDecisions)
 	}
 	if deps.ApprovalChecker == nil {
 		return nil, fmt.Errorf("approval checker is required")

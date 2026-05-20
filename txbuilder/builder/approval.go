@@ -105,17 +105,19 @@ func applyDexExchangeApprovalDecisions(
 
 	legByKey := make(map[string]resolved.ResolvedLeg, len(resolvedLegs))
 	for _, leg := range resolvedLegs {
+		leg.ExchangeParam.Spender = nil
 		legByKey[resolved.ResolvedLegRoutePositionKey(leg)] = leg
 	}
 
 	for index, alreadyApproved := range approvalDecisions {
-		if alreadyApproved {
-			continue
-		}
 		request := approvalRequests[index]
 		leg, ok := legByKey[request.routePositionKey]
 		if !ok {
 			return nil, fmt.Errorf("missing resolved leg for route position %s", request.routePositionKey)
+		}
+		if alreadyApproved {
+			legByKey[request.routePositionKey] = leg
+			continue
 		}
 		leg.ExchangeParam.ApproveData = &resolved.ApproveData{
 			Token:  normalizeAddress(request.request.Token),

@@ -136,8 +136,10 @@ func (b Executor01Builder) validatePhase2eScope(
 					return fmt.Errorf("Executor01 custom wethAddress is not implemented in Phase 2e")
 				}
 			}
-			if exchangeParam.Spender != nil {
-				return fmt.Errorf("Executor01 spender override is not implemented in Phase 2e")
+			if exchangeParam.Spender != nil &&
+				exchangeParam.ApproveData == nil &&
+				!boolValue(exchangeParam.SkipApproval) {
+				return fmt.Errorf("Executor01 spender requires approveData or skipApproval after approval planning")
 			}
 			if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) {
 				return fmt.Errorf("Executor01 sendEthButSupportsInsertFromAmount is not implemented in Phase 2e")
@@ -156,9 +158,6 @@ func (b Executor01Builder) validatePhase2eScope(
 			}
 			if boolValue(exchangeParam.AmountsPacked128) {
 				return fmt.Errorf("Executor01 amountsPacked128 is not implemented in Phase 2e")
-			}
-			if boolValue(exchangeParam.SkipApproval) {
-				return fmt.Errorf("Executor01 skipApproval is not implemented in Phase 2e")
 			}
 			if exchangeParam.SpecialDexFlag != nil && *exchangeParam.SpecialDexFlag != int(specialDexDefault) {
 				return fmt.Errorf("Executor01 specialDexFlag is not implemented in Phase 2e")
