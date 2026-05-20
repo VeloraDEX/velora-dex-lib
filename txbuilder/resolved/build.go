@@ -81,6 +81,7 @@ func BuildTransactionFromResolved(input BuildInput, deps BuildDeps) (out BuildOu
 		To:                   input.AugustusV6Address,
 		Value:                DecimalString(value),
 		Data:                 data,
+		ChainID:              input.Network,
 		GasPrice:             "",
 		MaxFeePerGas:         "",
 		MaxPriorityFeePerGas: "",

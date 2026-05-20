@@ -97,6 +97,7 @@ type DirectBuildInput struct {
 	SrcAmount         DecimalString   `json:"srcAmount"`
 	MinMaxAmount      DecimalString   `json:"minMaxAmount"`
 	Side              Side            `json:"side"`
+	Network           int             `json:"network"`
 	Gas               *GasInput       `json:"gas,omitempty"`
 }
 
@@ -122,6 +123,7 @@ type TxObject struct {
 	To                   Address       `json:"to"`
 	Value                DecimalString `json:"value"`
 	Data                 HexBytes      `json:"data"`
+	ChainID              int           `json:"chainId"`
 	GasPrice             DecimalString `json:"gasPrice,omitempty"`
 	MaxFeePerGas         DecimalString `json:"maxFeePerGas,omitempty"`
 	MaxPriorityFeePerGas DecimalString `json:"maxPriorityFeePerGas,omitempty"`

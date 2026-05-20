@@ -24,6 +24,7 @@ func BuildDirectTransactionFromResolved(
 		To:                   input.AugustusV6Address,
 		Value:                directTxValue(input),
 		Data:                 data,
+		ChainID:              input.Network,
 		GasPrice:             "",
 		MaxFeePerGas:         "",
 		MaxPriorityFeePerGas: "",
