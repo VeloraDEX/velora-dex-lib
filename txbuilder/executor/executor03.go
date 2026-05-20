@@ -103,11 +103,15 @@ func (b Executor03Builder) validatePhase2dScope(
 		if !exchangeParam.DexFuncHasRecipient {
 			return fmt.Errorf("Executor03 dexFuncHasRecipient=false is not implemented in Phase 2d")
 		}
-		if boolValue(exchangeParam.NeedUnwrapNative) {
-			return fmt.Errorf("Executor03 needUnwrapNative is not implemented in Phase 2d")
-		}
 		if exchangeParam.WethAddress != nil {
-			return fmt.Errorf("Executor03 custom wethAddress is not implemented in Phase 2d")
+			swap := orderedLeg.Swap
+			if boolValue(exchangeParam.NeedUnwrapNative) ||
+				isETHAddress(swap.SrcToken) ||
+				isETHAddress(swap.DestToken) ||
+				isWETHAddress(swap.SrcToken, b.context) ||
+				isWETHAddress(swap.DestToken, b.context) {
+				return fmt.Errorf("Executor03 custom wethAddress is only supported for non-wrapper TS parity routes")
+			}
 		}
 		if exchangeParam.Spender != nil {
 			if exchangeParam.ApproveData == nil &&
@@ -291,9 +295,49 @@ func (b Executor03Builder) buildSingleSwapCallData(
 	}
 
 	swapCallData := dexCallData
-	if boolValue(curExchangeParam.NeedUnwrapNative) &&
-		(isWETHAddress(swap.SrcToken, b.context) || isWETHAddress(swap.DestToken, b.context)) {
-		return "", fmt.Errorf("Executor03 needUnwrapNative calldata is not implemented in Phase 2d")
+	isWETHSrcUnwrap :=
+		boolValue(curExchangeParam.NeedUnwrapNative) &&
+			isWETHAddress(swap.SrcToken, b.context)
+	isWETHDestWrap :=
+		boolValue(curExchangeParam.NeedUnwrapNative) &&
+			isWETHAddress(swap.DestToken, b.context)
+
+	if isWETHSrcUnwrap {
+		withdrawRawCalldata, err := buildERC20WithdrawCalldata(swap.SwapExchanges[index].SrcAmount)
+		if err != nil {
+			return "", err
+		}
+		withdrawCallData, err := buildExecutor03UnwrapEthCallData(
+			getWETHAddress(curExchangeParam, b.context),
+			withdrawRawCalldata,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapCallData, err = concatHex(string(withdrawCallData), string(swapCallData))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if isWETHDestWrap {
+		depositRawCalldata, err := buildERC20DepositCalldata()
+		if err != nil {
+			return "", err
+		}
+		depositCallData, err := buildExecutor03WrapEthCallData(
+			getWETHAddress(curExchangeParam, b.context),
+			depositRawCalldata,
+			sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
+			0,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapCallData, err = concatHex(string(swapCallData), string(depositCallData))
+		if err != nil {
+			return "", err
+		}
 	}
 
 	if curExchangeParam.TransferSrcTokenBeforeSwap != nil {

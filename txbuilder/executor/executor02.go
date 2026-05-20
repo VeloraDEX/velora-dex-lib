@@ -165,12 +165,6 @@ func (b Executor02Builder) validatePhase2cScope(
 	exchangeParams []resolved.DexExchangeBuildParam,
 ) error {
 	for index, exchangeParam := range exchangeParams {
-		if boolValue(exchangeParam.NeedUnwrapNative) {
-			return fmt.Errorf("Executor02 needUnwrapNative is not implemented in Phase 2c")
-		}
-		if exchangeParam.WethAddress != nil {
-			return fmt.Errorf("Executor02 custom wethAddress is not implemented in Phase 2c")
-		}
 		if exchangeParam.Spender != nil {
 			if exchangeParam.ApproveData == nil &&
 				!boolValue(exchangeParam.SkipApproval) {
@@ -577,8 +571,6 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 		return "", fmt.Errorf("missing exchange param for route position %d:%d:%d", routeIndex, swapIndex, swapExchangeIndex)
 	}
 	curExchangeParam := exchangeParams[exchangeParamIndex]
-	// Phase 2c scope guards still reject NeedUnwrapNative and custom WETH.
-	// Restore those TS branches when the guards relax.
 
 	dexCallData, err := b.buildDexCallData(
 		priceRoute,
@@ -595,6 +587,50 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 
 	swapExchangeCallData := dexCallData
 	isLastSwap := swapIndex == len(priceRoute.BestRoute[routeIndex].Swaps)-1
+	isWETHSrcUnwrap :=
+		boolValue(curExchangeParam.NeedUnwrapNative) &&
+			isWETHAddress(swap.SrcToken, b.context)
+	isWETHDestWrap :=
+		boolValue(curExchangeParam.NeedUnwrapNative) &&
+			isWETHAddress(swap.DestToken, b.context)
+
+	if isWETHSrcUnwrap {
+		withdrawRawCalldata, err := buildERC20WithdrawCalldata(swapExchange.SrcAmount)
+		if err != nil {
+			return "", err
+		}
+		withdrawCallData, err := buildUnwrapEthCallData(
+			getWETHAddress(curExchangeParam, b.context),
+			withdrawRawCalldata,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapExchangeCallData, err = concatHex(string(withdrawCallData), string(swapExchangeCallData))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if isWETHDestWrap {
+		depositRawCalldata, err := buildERC20DepositCalldata()
+		if err != nil {
+			return "", err
+		}
+		depositCallData, err := buildWrapEthCallData(
+			getWETHAddress(curExchangeParam, b.context),
+			depositRawCalldata,
+			sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
+			0,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapExchangeCallData, err = concatHex(string(swapExchangeCallData), string(depositCallData))
+		if err != nil {
+			return "", err
+		}
+	}
 
 	if curExchangeParam.TransferSrcTokenBeforeSwap != nil {
 		transferCallData, err := buildERC20TransferCalldata(
@@ -725,9 +761,7 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 				exchangeParams,
 				exchangeParamIndex,
 			)
-		// TS also unwraps for customWethAddress. Phase 2c rejects custom WETH
-		// addresses before bytecode generation; restore that OR when enabled.
-		if needUnwrap {
+		if curExchangeParam.WethAddress != nil || needUnwrap {
 			unwrapToSwapMap[swapIndex] = true
 			withdrawCallData, err = buildUnwrapEthCallData(
 				getWETHAddress(curExchangeParam, b.context),
@@ -741,9 +775,7 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 		if err != nil {
 			return "", err
 		}
-		// TS also appends final send-native calldata for customWethAddress.
-		// Phase 2c rejects custom WETH addresses before this branch.
-		if isSimpleSwap && needUnwrap {
+		if isSimpleSwap && (curExchangeParam.WethAddress != nil || needUnwrap) {
 			finalSpecialFlagCalldata, err := buildFinalSpecialFlagCalldata(b.context)
 			if err != nil {
 				return "", err
