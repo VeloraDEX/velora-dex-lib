@@ -10,6 +10,7 @@ const (
 	bytes96Length = 96
 
 	defaultReturnAmountPos      = 255
+	maxReturnAmountPos          = 255
 	wrapUnwrapFromAmountPos     = 4
 	erc20TransferAmountPos      = 36
 	approveCalldataDestTokenPos = 68

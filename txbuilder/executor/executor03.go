@@ -125,7 +125,7 @@ func (b Executor03Builder) validatePhase2dScope(
 			return fmt.Errorf("Executor03 swappedAmountNotPresentInExchangeData is not implemented in Phase 2d")
 		}
 		if exchangeParam.ReturnAmountPos != nil {
-			return fmt.Errorf("Executor03 returnAmountPos override is not implemented in Phase 2d")
+			return fmt.Errorf("Executor03 returnAmountPos override requires contract-compatible mapping to toAmountPos metadata")
 		}
 		if exchangeParam.InsertFromAmountPos != nil {
 			return fmt.Errorf("Executor03 insertFromAmountPos override is not implemented in Phase 2d")

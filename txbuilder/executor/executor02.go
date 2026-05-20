@@ -186,8 +186,8 @@ func (b Executor02Builder) validatePhase2cScope(
 		if boolValue(exchangeParam.SwappedAmountNotPresentInExchangeData) {
 			return fmt.Errorf("Executor02 swappedAmountNotPresentInExchangeData is not implemented in Phase 2c")
 		}
-		if exchangeParam.ReturnAmountPos != nil {
-			return fmt.Errorf("Executor02 returnAmountPos override is not implemented in Phase 2c")
+		if err := validateReturnAmountPosOverride("Executor02", exchangeParam.ReturnAmountPos); err != nil {
+			return err
 		}
 		if exchangeParam.InsertFromAmountPos != nil {
 			return fmt.Errorf("Executor02 insertFromAmountPos override is not implemented in Phase 2c")

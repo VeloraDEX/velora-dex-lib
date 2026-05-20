@@ -100,6 +100,20 @@ func getExchangeParams(input resolved.ExecutorBytecodeBuildInput) ([]resolved.De
 	return exchangeParams, nil
 }
 
+func validateReturnAmountPosOverride(executorName string, returnAmountPos *int) error {
+	if returnAmountPos == nil {
+		return nil
+	}
+	if *returnAmountPos < 0 || *returnAmountPos > maxReturnAmountPos {
+		return fmt.Errorf(
+			"%s returnAmountPos must fit in 1 byte: %d",
+			executorName,
+			*returnAmountPos,
+		)
+	}
+	return nil
+}
+
 func buildExecutor0102CallData(
 	tokenAddress resolved.Address,
 	calldata resolved.HexBytes,
