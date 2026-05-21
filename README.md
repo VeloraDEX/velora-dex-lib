@@ -1,7 +1,6 @@
 # velora-dex-lib
 
-Private Go module for ParaSwap/Velora transaction-building and DEX encoding
-logic.
+Go module for ParaSwap/Velora transaction-building and DEX encoding logic.
 
 The module currently exposes the Go implementation of the generic V6
 `GenericSwapTransactionBuilder` path, executor bytecode builders, resolved
@@ -10,21 +9,16 @@ checking helpers.
 
 ## Install
 
-For a private GitHub module, configure consumers with:
-
-```bash
-go env -w GOPRIVATE=github.com/VeloraDEX/*
-go env -w GONOSUMDB=github.com/VeloraDEX/*
-```
-
-Then, from the consuming service:
+From the consuming service:
 
 ```bash
 go get github.com/VeloraDEX/velora-dex-lib@v0.1.0
 ```
 
 Use a version tag in production. During active development a branch or commit
-SHA can be used temporarily.
+SHA can be used temporarily. No GitHub authentication is required when this
+repository is public and the consuming environment does not force this module
+path through private-module settings such as `GOPRIVATE`.
 
 ## Main Packages
 
@@ -106,3 +100,8 @@ The consuming service must provide:
   routes. In production, prefer a real `ApprovalChecker`.
 - This module is intended to be imported by Go services. TypeScript parity
   fixture generation remains in the source `paraswap-dex-lib` repository.
+
+## License
+
+This repository is licensed under GPL-3.0, matching the public
+[`paraswap-dex-lib`](https://github.com/VeloraDEX/paraswap-dex-lib) repository.
