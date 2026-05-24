@@ -282,6 +282,7 @@ func buildResolvedLegs(
 			ExecutorAddress:     executorAddress,
 			Side:                req.PriceRoute.Side,
 			Data:                swapExchange.Data,
+			Options:             req.GetDexParamOptions,
 		}
 		dexParam, err := dexEncoder.GetDexParam(ctx, dexParamInput)
 		if err != nil {

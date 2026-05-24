@@ -30,6 +30,7 @@ type BuildRequest struct {
 	Deadline             resolved.DecimalString  `json:"deadline"`
 	UUID                 string                  `json:"uuid"`
 	Beneficiary          *resolved.Address       `json:"beneficiary,omitempty"`
+	GetDexParamOptions   *GetDexParamOptions     `json:"getDexParamOptions,omitempty"`
 }
 
 type PriceRoute struct {
@@ -77,6 +78,10 @@ type Deps struct {
 
 type Options struct {
 	SkipApprovalCheck bool
+}
+
+type GetDexParamOptions struct {
+	NowTimestampMs *uint64 `json:"nowTimestampMs,omitempty"`
 }
 
 type DexRegistry interface {
@@ -155,6 +160,7 @@ type DexParamInput struct {
 	ExecutorAddress resolved.Address       `json:"executorAddress"`
 	Side            resolved.Side          `json:"side"`
 	Data            json.RawMessage        `json:"data,omitempty"`
+	Options         *GetDexParamOptions    `json:"options,omitempty"`
 }
 
 type DexExchangeParam struct {
