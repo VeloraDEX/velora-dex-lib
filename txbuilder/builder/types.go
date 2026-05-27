@@ -42,6 +42,8 @@ type PriceRoute struct {
 	DestToken      resolved.Address       `json:"destToken"`
 	SrcAmount      resolved.DecimalString `json:"srcAmount"`
 	DestAmount     resolved.DecimalString `json:"destAmount"`
+	SrcUSD         *string                `json:"srcUSD,omitempty"`
+	DestUSD        *string                `json:"destUSD,omitempty"`
 	BestRoute      []PriceRouteRoute      `json:"bestRoute"`
 }
 
