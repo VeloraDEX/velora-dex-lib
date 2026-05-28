@@ -2,10 +2,9 @@
 
 Go module for ParaSwap/Velora transaction-building and DEX encoding logic.
 
-The module currently exposes the Go implementation of the generic V6
-`GenericSwapTransactionBuilder` path, executor bytecode builders, resolved
-transaction encoding, a small DEX encoder registry, and Augustus approval
-checking helpers.
+The module currently exposes the Go implementation of the generic and direct
+V6 transaction-builder paths, executor bytecode builders, resolved transaction
+encoding, a small DEX encoder registry, and Augustus approval checking helpers.
 
 ## Install
 
@@ -22,7 +21,7 @@ path through private-module settings such as `GOPRIVATE`.
 
 ## Main Packages
 
-- `txbuilder/builder`: public generic swap builder API.
+- `txbuilder/builder`: public generic and direct swap builder APIs.
 - `txbuilder/approvals`: Augustus approval checker with TypeScript-compatible
   cache keys and Multicall3 allowance reads.
 - `txbuilder/resolved`: resolved build input validation and Augustus V6
@@ -77,7 +76,9 @@ func Build(
 ```
 
 `BuildGeneric` returns `resolved.BuildOutput`, whose `TxObject.Data` field is
-the final Augustus V6 transaction calldata.
+the final Augustus V6 transaction calldata. For V6 direct methods, wire
+`Deps.DirectDexRegistry` and call `builder.BuildDirect`, which returns
+`resolved.DirectBuildOutput`.
 
 ## Runtime Dependencies
 
@@ -85,6 +86,8 @@ The consuming service must provide:
 
 - network-specific `resolved.EncodingContext`.
 - a `builder.DexRegistry` containing all DEX route labels the service accepts.
+- a `builder.DirectDexRegistry` for direct methods when using
+  `builder.BuildDirect`.
 - a production `builder.ApprovalChecker`, typically backed by existing
   allowance state, Redis, or RPC calls. `txbuilder/approvals` provides the
   reusable Augustus checker; consuming services wire their Redis and RPC clients

@@ -1,7 +1,7 @@
-# Go Generic Swap Builder Usage
+# Go Swap Builder Usage
 
-This document describes how to construct and call the Go version of the
-`GenericSwapTransactionBuilder` for generic V6 routes.
+This document describes how to construct and call the Go version of the V6
+transaction builder for generic and direct routes.
 
 ## Entry Point
 
@@ -25,6 +25,16 @@ type resolved.BuildOutput struct {
 
 `TxObject.Data` is the final transaction calldata.
 
+For V6 direct methods, use:
+
+```go
+output, err := builder.BuildDirect(ctx, req, deps)
+```
+
+`BuildDirect` validates the direct route shape, calls the DEX-specific
+`GetDirectParamV6` implementation, and ABI-encodes the returned params through
+the resolved direct encoder. It returns `resolved.DirectBuildOutput`.
+
 ## Build Request
 
 `builder.BuildRequest` is the public input. It mirrors the TypeScript
@@ -47,6 +57,19 @@ Supported generic methods are:
 - `swapExactAmountOut`
 - `swapExactAmountInPro`
 - `swapExactAmountOutPro`
+
+Supported direct methods are:
+
+- `swapExactAmountInOnUniswapV2`
+- `swapExactAmountOutOnUniswapV2`
+- `swapExactAmountInOnUniswapV3`
+- `swapExactAmountOutOnUniswapV3`
+- `swapExactAmountInOnBalancerV2`
+- `swapExactAmountOutOnBalancerV2`
+- `swapExactAmountInOnCurveV1`
+- `swapExactAmountInOnCurveV2`
+- `swapOnAugustusRFQTryBatchFill`
+- `swapExactAmountInOutOnMakerPSM`
 
 ## Required Dependencies
 
@@ -75,6 +98,23 @@ deps := builder.Deps{
 
 `EncodingContext` must match the request network and executor addresses. For
 `ExecutorWETH`, use the wrapped-native address.
+
+For direct methods, `ExecutorFactory`,
+`EncodingContext.ExecutorsAddresses`,
+`EncodingContext.WrappedNativeTokenAddress`, `ApprovalChecker`, and
+`WethProvider` are not consulted. Set `DirectDexRegistry` and provide `Network`
+plus `AugustusV6Address` in the encoding context:
+
+```go
+deps := builder.Deps{
+    EncodingContext: resolved.EncodingContext{
+        Network:           network,
+        AugustusV6Address: augustus,
+    },
+    AugustusV6ABI:     resolved.MustLoadAugustusV6ABI(),
+    DirectDexRegistry: directDexRegistry,
+}
+```
 
 ## DEX Registry And Encoders
 
@@ -113,6 +153,37 @@ dexRegistry := registry.MustNew(
 The registry performs exact key matching. Register every route label or alias
 you expect to accept.
 
+For direct methods, the builder uses:
+
+```go
+type DirectDexRegistry interface {
+    GetDirectDexEncoder(ctx context.Context, network int, dexKey string, contractMethod string) (builder.DirectDexEncoder, error)
+}
+
+type DirectDexEncoder interface {
+    DirectContractMethodsV6() []string
+    GetDirectParamV6(ctx context.Context, input builder.DirectParamInput) (builder.DirectParamResult, error)
+}
+```
+
+`GetDirectParamV6` receives normalized route data, side-specific direct
+amounts, quote metadata, permit, UUID, packed partner-and-fee value,
+beneficiary, block number, and raw `swapExchange.data`. It returns the final
+direct method params as DEX-owned JSON, which the resolved layer ABI-packs.
+
+The shared `txbuilder/dex/registry` package supports generic-only,
+direct-only, and combined entries:
+
+```go
+dexRegistry := registry.MustNew(
+    registry.Entry{
+        Keys:    []string{"BalancerV2"},
+        Encoder: balancerV2Generic,
+        DirectEncoder: balancerV2Direct,
+    },
+)
+```
+
 ## Approval Checker
 
 Approvals are supplied through:
@@ -143,6 +214,9 @@ deps.Options.SkipApprovalCheck = true
 When `SkipApprovalCheck` is true, the builder skips the checker and treats all
 approval requests as missing.
 
+Direct methods do not use `ApprovalChecker`; any direct approval behavior is
+owned by the DEX-specific `GetDirectParamV6` output.
+
 ## WETH Provider
 
 Routes that require aggregate WETH deposit or withdraw calldata use:
@@ -162,6 +236,7 @@ The consuming service must provide:
 
 - network-specific `resolved.EncodingContext`.
 - a `builder.DexRegistry` containing all DEX route labels the service accepts.
+- a `builder.DirectDexRegistry` for direct methods.
 - a production `builder.ApprovalChecker`, typically backed by existing
   allowance state, Redis, or RPC calls.
 - a `builder.WethCallDataProvider` for routes that need aggregate WETH deposit

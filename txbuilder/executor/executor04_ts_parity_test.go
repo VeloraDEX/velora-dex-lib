@@ -12,7 +12,7 @@ import (
 	"github.com/VeloraDEX/velora-dex-lib/txbuilder/resolved"
 )
 
-const tsDexLibRoot = "/Users/danylokaniev/work/paraswap/paraswap-dex-lib"
+const tsDexLibRoot = "paraswap-dex-lib"
 const tsMainnetWETH = resolved.Address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
 
 type tsOptimalRoute struct {

@@ -69,13 +69,14 @@ type PriceRouteSwapExchange struct {
 }
 
 type Deps struct {
-	EncodingContext resolved.EncodingContext
-	AugustusV6ABI   *ethabi.ABI
-	ExecutorFactory resolved.ExecutorBytecodeBuilderFactory
-	DexRegistry     DexRegistry
-	ApprovalChecker ApprovalChecker
-	WethProvider    WethCallDataProvider
-	Options         Options
+	EncodingContext   resolved.EncodingContext
+	AugustusV6ABI     *ethabi.ABI
+	ExecutorFactory   resolved.ExecutorBytecodeBuilderFactory
+	DexRegistry       DexRegistry
+	DirectDexRegistry DirectDexRegistry
+	ApprovalChecker   ApprovalChecker
+	WethProvider      WethCallDataProvider
+	Options           Options
 }
 
 type Options struct {
@@ -93,6 +94,20 @@ type DexRegistry interface {
 type DexEncoder interface {
 	NeedWrapNative(ctx context.Context, input NeedWrapNativeInput) (bool, error)
 	GetDexParam(ctx context.Context, input DexParamInput) (DexExchangeParam, error)
+}
+
+type DirectDexRegistry interface {
+	GetDirectDexEncoder(
+		ctx context.Context,
+		network int,
+		dexKey string,
+		contractMethod string,
+	) (DirectDexEncoder, error)
+}
+
+type DirectDexEncoder interface {
+	DirectContractMethodsV6() []string
+	GetDirectParamV6(ctx context.Context, input DirectParamInput) (DirectParamResult, error)
 }
 
 type ApprovalRequest struct {
@@ -163,6 +178,28 @@ type DexParamInput struct {
 	Side            resolved.Side          `json:"side"`
 	Data            json.RawMessage        `json:"data,omitempty"`
 	Options         *GetDexParamOptions    `json:"options,omitempty"`
+}
+
+type DirectParamInput struct {
+	DexKey         string                 `json:"dexKey"`
+	Network        int                    `json:"network"`
+	ContractMethod string                 `json:"contractMethod"`
+	SrcToken       resolved.Address       `json:"srcToken"`
+	DestToken      resolved.Address       `json:"destToken"`
+	SrcAmount      resolved.DecimalString `json:"srcAmount"`
+	DestAmount     resolved.DecimalString `json:"destAmount"`
+	QuotedAmount   resolved.DecimalString `json:"quotedAmount"`
+	Data           json.RawMessage        `json:"data,omitempty"`
+	Side           resolved.Side          `json:"side"`
+	Permit         resolved.HexBytes      `json:"permit"`
+	UUID           string                 `json:"uuid"`
+	PartnerAndFee  resolved.DecimalString `json:"partnerAndFee"`
+	Beneficiary    resolved.Address       `json:"beneficiary"`
+	BlockNumber    int64                  `json:"blockNumber"`
+}
+
+type DirectParamResult struct {
+	Params json.RawMessage `json:"params"`
 }
 
 type DexExchangeParam struct {
