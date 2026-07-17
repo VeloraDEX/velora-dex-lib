@@ -315,7 +315,15 @@ func (b Executor02Builder) buildSimpleSwapFlags(
 	}
 
 	if isWETHSrc {
-		dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+		// Also insert the runtime fromAmount into the dex calldata when the dex
+		// supports it: msg.value is the threaded amount, and split slicing can
+		// drift a wei from the quoted amount — dexes that require
+		// msg.value == amountIn (e.g. FluidDex) revert on the mismatch otherwise.
+		if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) && !forcePreventInsertFromAmount {
+			dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountCheckSrcTokenBalanceAfterSwap
+		} else {
+			dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+		}
 	} else if isWETHDest {
 		if forcePreventInsertFromAmount {
 			dexFlag = dontInsertFromAmountCheckEthBalanceAfterSwap
@@ -434,7 +442,15 @@ func (b Executor02Builder) buildMultiMegaSwapFlags(
 	}
 
 	if isWETHSrc {
-		dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+		// Also insert the runtime fromAmount into the dex calldata when the dex
+		// supports it: msg.value is the threaded amount, and split slicing can
+		// drift a wei from the quoted amount — dexes that require
+		// msg.value == amountIn (e.g. FluidDex) revert on the mismatch otherwise.
+		if boolValue(exchangeParam.SendEthButSupportsInsertFromAmount) && !forcePreventInsertFromAmount {
+			dexFlag = sendEthEqualToFromAmountPlusInsertFromAmountCheckSrcTokenBalanceAfterSwap
+		} else {
+			dexFlag = sendEthEqualToFromAmountCheckSrcTokenBalanceAfterSwap
+		}
 	} else if isWETHDest {
 		if forcePreventInsertFromAmount {
 			dexFlag = dontInsertFromAmountCheckEthBalanceAfterSwap
