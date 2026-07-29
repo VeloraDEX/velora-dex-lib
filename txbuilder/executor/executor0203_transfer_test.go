@@ -235,7 +235,7 @@ func TestExecutor0203ValidationAcceptsTransferBeforeSwap(t *testing.T) {
 	exchangeParams[0].ReturnAmountPos = nil
 	exchangeParams[0].TransferSrcTokenBeforeSwap = &recipient
 
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err != nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err != nil {
 		t.Fatalf("Executor02 valid transferSrcTokenBeforeSwap rejected: %v", err)
 	}
 
@@ -243,7 +243,7 @@ func TestExecutor0203ValidationAcceptsTransferBeforeSwap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getOrderedLegs() error = %v", err)
 	}
-	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err != nil {
+	if err := NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil); err != nil {
 		t.Fatalf("Executor03 valid transferSrcTokenBeforeSwap rejected: %v", err)
 	}
 }

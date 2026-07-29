@@ -161,7 +161,7 @@ func TestExecutor0203CustomWETHAddress(t *testing.T) {
 				return NewExecutor02Builder(testEncodingContext()).BuildBytecode(input)
 			},
 			validate: func(priceRoute executorRoute, exchangeParams []resolved.DexExchangeBuildParam) error {
-				return NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams)
+				return NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams)
 			},
 		},
 		{
@@ -177,7 +177,7 @@ func TestExecutor0203CustomWETHAddress(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil)
+				return NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil)
 			},
 		},
 	} {
@@ -219,7 +219,7 @@ func TestExecutor02CustomWETHUsesCustomAddressForNativeDestUnwrap(t *testing.T) 
 	}
 }
 
-func TestExecutor03RejectsCustomWETHWrapperShapeWithoutTSParity(t *testing.T) {
+func TestExecutor03CustomWETHWithWETHSourceUnwrap(t *testing.T) {
 	priceRoute, exchangeParams := testExecutorRouteAndParams(0)
 	priceRoute.SrcToken = testWETH
 	priceRoute.BestRoute[0].Swaps[0].SrcToken = testWETH
@@ -230,8 +230,18 @@ func TestExecutor03RejectsCustomWETHWrapperShapeWithoutTSParity(t *testing.T) {
 
 	input := testBytecodeBuildInput(priceRoute, exchangeParams)
 	input.ExecutorType = resolved.Executor03
-	if _, err := NewExecutor03Builder(testEncodingContext()).BuildBytecode(input); err == nil {
-		t.Fatalf("Executor03 accepted custom WETH with WETH-source unwrap")
+	bytecode, err := NewExecutor03Builder(testEncodingContext()).BuildBytecode(input)
+	if err != nil {
+		t.Fatalf("BuildBytecode() error = %v", err)
+	}
+
+	// getWETHAddress prefers the custom wethAddress for the pre-swap unwrap.
+	raw := strip0x(string(bytecode))
+	if !strings.Contains(raw, strip0x(string(testCustomWETH))) {
+		t.Fatalf("custom WETH address missing from bytecode: %s", bytecode)
+	}
+	if !strings.Contains(raw, testWithdrawSelector) {
+		t.Fatalf("custom WETH withdraw calldata missing: %s", bytecode)
 	}
 }
 

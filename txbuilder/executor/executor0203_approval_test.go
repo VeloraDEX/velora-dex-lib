@@ -263,7 +263,7 @@ func TestExecutor0203ValidationAcceptsSkipApprovalAndNormalizedSpender(t *testin
 		{
 			name: "Executor02",
 			validate: func(priceRoute executorRoute, exchangeParams []resolved.DexExchangeBuildParam) error {
-				return NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams)
+				return NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams)
 			},
 		},
 		{
@@ -273,7 +273,7 @@ func TestExecutor0203ValidationAcceptsSkipApprovalAndNormalizedSpender(t *testin
 				if err != nil {
 					return err
 				}
-				return NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil)
+				return NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil)
 			},
 		},
 	} {

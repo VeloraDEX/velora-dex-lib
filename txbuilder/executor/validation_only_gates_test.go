@@ -154,10 +154,10 @@ func TestExecutor010203SpecialDexFlagValidationAndPacking(t *testing.T) {
 
 	executor0102SpecialFlag := int(specialDexSwapOnAugustusRFQ)
 	exchangeParams[0].SpecialDexFlag = &executor0102SpecialFlag
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err != nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err != nil {
 		t.Fatalf("Executor01 valid specialDexFlag rejected: %v", err)
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err != nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err != nil {
 		t.Fatalf("Executor02 valid specialDexFlag rejected: %v", err)
 	}
 
@@ -182,7 +182,7 @@ func TestExecutor010203SpecialDexFlagValidationAndPacking(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getOrderedLegs() error = %v", err)
 	}
-	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err != nil {
+	if err := NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil); err != nil {
 		t.Fatalf("Executor03 valid specialDexFlag rejected: %v", err)
 	}
 	callData, err = NewExecutor03Builder(testEncodingContext()).buildDexCallData(
@@ -203,17 +203,17 @@ func TestExecutor010203SpecialDexFlagValidationAndPacking(t *testing.T) {
 
 	unsupported := int(specialDexExecuteVerticalBranching)
 	exchangeParams[0].SpecialDexFlag = &unsupported
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err == nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err == nil {
 		t.Fatalf("Executor01 accepted unsupported specialDexFlag")
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err == nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err == nil {
 		t.Fatalf("Executor02 accepted unsupported specialDexFlag")
 	}
 	orderedLegs, err = getOrderedLegs(testBytecodeBuildInput(priceRoute, exchangeParams))
 	if err != nil {
 		t.Fatalf("getOrderedLegs() error = %v", err)
 	}
-	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err == nil {
+	if err := NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil); err == nil {
 		t.Fatalf("Executor03 accepted unsupported specialDexFlag")
 	}
 }

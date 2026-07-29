@@ -80,19 +80,24 @@ original audit's "identical output for two exchanges" claim was wrong.
 
 ---
 
-## 3. Gated Params
+## 3. Gated Params — ALL RELAXED (2026-07-29, DEXLIB-204)
 
-Fields the validator rejects before bytecode generation.
+Every param the validator used to reject before bytecode generation is now
+accepted with legacy-parity encoding. The only remaining gate is the
+`specialDexFlag` whitelist (section 3.3).
 
 | Param | Executor01 | Executor02 | Executor03 |
 | --- | --- | --- | --- |
 | `dexFuncHasRecipient=false` | supported | supported | supported |
-| `needWrapNative=false` | **rejected** `executor01.go:120` | supported | supported |
-| `needUnwrapNative` | supported (WETH-src and WETH-dest) | supported | supported |
-| custom `wethAddress` | only with `needUnwrapNative` + WETH-src `executor01.go:128-134` | supported | non-wrapper routes only `executor03.go:103-112` |
-| `amountsPacked128` | rejected `executor01.go:146` | rejected `executor02.go:217` | supported |
-| `returnAmountPos` | supported | supported (suppressed on root unwrap, matches TS) | rejected `executor03.go:120` |
+| `needWrapNative=false` | supported (sendEth / checkEthBalance flag arms) | supported | supported |
+| `needUnwrapNative` | supported (WETH-src, WETH-dest, no-op elsewhere like TS) | supported | supported |
+| custom `wethAddress` | supported (`getWETHAddress` at every site) | supported | supported |
+| `amountsPacked128` | supported (`flag \| 0x8000` + 128-bit search) | supported | supported |
+| `returnAmountPos` | supported | supported (suppressed on root unwrap, matches TS) | accepted and ignored — legacy `buildExecutor03CallData` has no returnAmountPos field |
 | `specialDexFlag` | whitelist | whitelist | whitelist |
+
+Fixtures: `txbuilder/executor/executor_parity_fixes_test.go`,
+`executor03_amounts_packed128_test.go`, `executor0203_unwrap_weth_test.go`.
 
 ### 3.1 `dexFuncHasRecipient=false` — CLOSED (2026-07-29, DEXLIB-202)
 
@@ -183,14 +188,8 @@ Checked, no gap found:
 
 ## 6. Suggested Order of Work
 
-1. **`amountsPacked128` for Executor01/02** — port `applyIs128` (`flag | 0x8000`)
-   plus the 128-bit position search that Executor03 already has (the shared
-   `findAmountPosWithFallback` now takes an `is128` flag, so most of this is
-   wiring).
-2. **Executor03 `returnAmountPos`** — needs a contract-level decision on mapping
-   to `toAmountPos`.
-3. **Revertable fallback groups** (section 1) — tracked as DEXLIB-203; largest,
-   and depends on route input carrying `fallback`.
+1. **Revertable fallback groups** (section 1) — tracked as DEXLIB-203; the
+   only remaining encoding gap.
 
 Done since the audit (all 2026-07-29):
 
@@ -201,6 +200,8 @@ Done since the audit (all 2026-07-29):
 - ~~Executor03 exchange ordering~~ — section 2.3.
 - ~~Executor01 `isWETHDestWrap` + WETH-dest `needUnwrapNative` gate~~ — section 3.2.
 - ~~Executor02 root deposit on single-swap routes~~ — section 4.1.
+- ~~all remaining gated params (needWrapNative=false, amountsPacked128,
+  Executor03 returnAmountPos, custom wethAddress)~~ — DEXLIB-204, section 3.
 
 ---
 

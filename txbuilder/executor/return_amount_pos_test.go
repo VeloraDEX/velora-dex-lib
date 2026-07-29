@@ -130,20 +130,20 @@ func TestExecutor02ReturnAmountPosFallsBackForUnwrapAfterLastSwapInRoute(t *test
 func TestExecutor0102ReturnAmountPosValidation(t *testing.T) {
 	priceRoute, exchangeParams := testExecutorRouteAndParams(255)
 
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err != nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err != nil {
 		t.Fatalf("Executor01 valid returnAmountPos rejected: %v", err)
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err != nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err != nil {
 		t.Fatalf("Executor02 valid returnAmountPos rejected: %v", err)
 	}
 
 	invalid := 256
 	exchangeParams[0].ReturnAmountPos = &invalid
 
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err == nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err == nil {
 		t.Fatalf("Executor01 accepted out-of-range returnAmountPos")
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err == nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err == nil {
 		t.Fatalf("Executor02 accepted out-of-range returnAmountPos")
 	}
 }
@@ -283,13 +283,13 @@ func TestExecutor010203InsertFromAmountPosValidation(t *testing.T) {
 		t.Fatalf("getOrderedLegs() error = %v", err)
 	}
 
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err != nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err != nil {
 		t.Fatalf("Executor01 valid insertFromAmountPos rejected: %v", err)
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err != nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err != nil {
 		t.Fatalf("Executor02 valid insertFromAmountPos rejected: %v", err)
 	}
-	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err != nil {
+	if err := NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil); err != nil {
 		t.Fatalf("Executor03 valid insertFromAmountPos rejected: %v", err)
 	}
 
@@ -300,13 +300,13 @@ func TestExecutor010203InsertFromAmountPosValidation(t *testing.T) {
 		t.Fatalf("getOrderedLegs() error = %v", err)
 	}
 
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err == nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err == nil {
 		t.Fatalf("Executor01 accepted out-of-range insertFromAmountPos")
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err == nil {
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err == nil {
 		t.Fatalf("Executor02 accepted out-of-range insertFromAmountPos")
 	}
-	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err == nil {
+	if err := NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil); err == nil {
 		t.Fatalf("Executor03 accepted out-of-range insertFromAmountPos")
 	}
 }

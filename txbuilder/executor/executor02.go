@@ -31,7 +31,7 @@ func (b Executor02Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	if len(exchangeParams) == 0 {
 		return "", fmt.Errorf("Executor02 requires at least one exchange param")
 	}
-	if err := b.validatePhase2cScope(priceRoute, exchangeParams); err != nil {
+	if err := b.validateExecutor02Input(priceRoute, exchangeParams); err != nil {
 		return "", err
 	}
 
@@ -197,7 +197,7 @@ func (b Executor02Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	return buildExecutor01TopLevelBytecode(swapsCalldata)
 }
 
-func (b Executor02Builder) validatePhase2cScope(
+func (b Executor02Builder) validateExecutor02Input(
 	priceRoute executorRoute,
 	exchangeParams []resolved.DexExchangeBuildParam,
 ) error {
@@ -213,9 +213,6 @@ func (b Executor02Builder) validatePhase2cScope(
 		}
 		if err := validateInsertFromAmountPosOverride("Executor02", exchangeParam.InsertFromAmountPos); err != nil {
 			return err
-		}
-		if boolValue(exchangeParam.AmountsPacked128) {
-			return fmt.Errorf("Executor02 amountsPacked128 is not implemented in Phase 2c")
 		}
 		if err := validateSpecialDexFlagOverride("Executor02", exchangeParam.SpecialDexFlag); err != nil {
 			return err
@@ -585,13 +582,18 @@ func (b Executor02Builder) buildDexCallData(
 		specialFlag = specialDex(*exchangeParam.SpecialDexFlag)
 	}
 
+	finalFlag := dexFlag
+	if boolValue(exchangeParam.AmountsPacked128) {
+		finalFlag = flag(int(dexFlag) | 0x8000)
+	}
+
 	return buildExecutor0102CallData(
 		exchangeParam.TargetExchange,
 		exchangeData,
 		fromAmountPos,
 		destTokenPos,
 		specialFlag,
-		dexFlag,
+		finalFlag,
 		returnAmountPos,
 	)
 }

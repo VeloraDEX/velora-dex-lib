@@ -38,7 +38,7 @@ func (b Executor03Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	if len(orderedLegs) == 0 {
 		return "", fmt.Errorf("Executor03 requires at least one exchange param")
 	}
-	if err := b.validatePhase2dScope(priceRoute, orderedLegs, input.WethPlan); err != nil {
+	if err := b.validateExecutor03Input(priceRoute, orderedLegs, input.WethPlan); err != nil {
 		return "", err
 	}
 
@@ -83,42 +83,31 @@ func (b Executor03Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	return buildExecutor03TopLevelBytecode(swapsCalldata)
 }
 
-func (b Executor03Builder) validatePhase2dScope(
+func (b Executor03Builder) validateExecutor03Input(
 	priceRoute executorRoute,
 	orderedLegs []orderedExecutorLeg,
 	wethPlan *resolved.WethPlan,
 ) error {
 	if len(priceRoute.BestRoute) != 1 {
-		return fmt.Errorf("Executor03 Phase 2d supports a single route only")
+		return fmt.Errorf("Executor03 supports a single route only")
 	}
 	if len(priceRoute.BestRoute[0].Swaps) != 1 {
-		return fmt.Errorf("Executor03 Phase 2d supports a single swap only")
+		return fmt.Errorf("Executor03 supports a single swap only")
 	}
 
 	for _, orderedLeg := range orderedLegs {
 		if orderedLeg.RouteIndex != 0 || orderedLeg.SwapIndex != 0 {
-			return fmt.Errorf("Executor03 Phase 2d supports only route position 0:0:*")
+			return fmt.Errorf("Executor03 supports only route position 0:0:*")
 		}
 		exchangeParam := orderedLeg.ResolvedLeg.ExchangeParam
-		if exchangeParam.WethAddress != nil {
-			swap := orderedLeg.Swap
-			if boolValue(exchangeParam.NeedUnwrapNative) ||
-				isETHAddress(swap.SrcToken) ||
-				isETHAddress(swap.DestToken) ||
-				isWETHAddress(swap.SrcToken, b.context) ||
-				isWETHAddress(swap.DestToken, b.context) {
-				return fmt.Errorf("Executor03 custom wethAddress is only supported for non-wrapper TS parity routes")
-			}
-		}
 		if exchangeParam.Spender != nil {
 			if exchangeParam.ApproveData == nil &&
 				!boolValue(exchangeParam.SkipApproval) {
 				return fmt.Errorf("Executor03 spender requires approveData or skipApproval after approval planning")
 			}
 		}
-		if exchangeParam.ReturnAmountPos != nil {
-			return fmt.Errorf("Executor03 returnAmountPos override requires contract-compatible mapping to toAmountPos metadata")
-		}
+		// returnAmountPos is accepted but ignored: legacy Executor03 never
+		// consumes it — buildExecutor03CallData has no returnAmountPos field.
 		if err := validateInsertFromAmountPosOverride("Executor03", exchangeParam.InsertFromAmountPos); err != nil {
 			return err
 		}

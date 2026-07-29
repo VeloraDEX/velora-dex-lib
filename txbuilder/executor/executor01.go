@@ -30,7 +30,7 @@ func (b Executor01Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	if len(exchangeParams) == 0 {
 		return "", fmt.Errorf("Executor01 requires at least one exchange param")
 	}
-	if err := b.validatePhase2eScope(priceRoute, exchangeParams, input.WethPlan); err != nil {
+	if err := b.validateExecutor01Input(priceRoute, exchangeParams, input.WethPlan); err != nil {
 		return "", err
 	}
 
@@ -97,7 +97,7 @@ func (b Executor01Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	return buildExecutor01TopLevelBytecode(swapsCalldata)
 }
 
-func (b Executor01Builder) validatePhase2eScope(
+func (b Executor01Builder) validateExecutor01Input(
 	priceRoute executorRoute,
 	exchangeParams []resolved.DexExchangeBuildParam,
 	wethPlan *resolved.WethPlan,
@@ -110,28 +110,13 @@ func (b Executor01Builder) validatePhase2eScope(
 	for _, route := range priceRoute.BestRoute {
 		for _, swap := range route.Swaps {
 			if len(swap.SwapExchanges) != 1 {
-				return fmt.Errorf("Executor01 Phase 2e supports one swapExchange per swap")
+				return fmt.Errorf("Executor01 supports one swapExchange per swap")
 			}
 			if exchangeParamIndex >= len(exchangeParams) {
 				return fmt.Errorf("missing exchange param for route position")
 			}
 
 			exchangeParam := exchangeParams[exchangeParamIndex]
-			if !exchangeParam.NeedWrapNative.Value {
-				return fmt.Errorf("Executor01 needWrapNative=false is not implemented in Phase 2e")
-			}
-			if boolValue(exchangeParam.NeedUnwrapNative) &&
-				!isWETHAddress(swap.SrcToken, b.context) &&
-				!isWETHAddress(swap.DestToken, b.context) {
-				return fmt.Errorf("Executor01 needUnwrapNative is not implemented in Phase 2e")
-			}
-			if exchangeParam.WethAddress != nil {
-				if !boolValue(exchangeParam.NeedUnwrapNative) ||
-					!isWETHAddress(swap.SrcToken, b.context) ||
-					!isWETHAddress(*exchangeParam.WethAddress, b.context) {
-					return fmt.Errorf("Executor01 custom wethAddress is not implemented in Phase 2e")
-				}
-			}
 			if exchangeParam.Spender != nil &&
 				exchangeParam.ApproveData == nil &&
 				!boolValue(exchangeParam.SkipApproval) {
@@ -142,9 +127,6 @@ func (b Executor01Builder) validatePhase2eScope(
 			}
 			if err := validateInsertFromAmountPosOverride("Executor01", exchangeParam.InsertFromAmountPos); err != nil {
 				return err
-			}
-			if boolValue(exchangeParam.AmountsPacked128) {
-				return fmt.Errorf("Executor01 amountsPacked128 is not implemented in Phase 2e")
 			}
 			if err := validateSpecialDexFlagOverride("Executor01", exchangeParam.SpecialDexFlag); err != nil {
 				return err
@@ -681,13 +663,18 @@ func (b Executor01Builder) buildDexCallData(
 		specialFlag = specialDex(*exchangeParam.SpecialDexFlag)
 	}
 
+	finalFlag := dexFlag
+	if boolValue(exchangeParam.AmountsPacked128) {
+		finalFlag = flag(int(dexFlag) | 0x8000)
+	}
+
 	return buildExecutor0102CallData(
 		exchangeParam.TargetExchange,
 		exchangeData,
 		fromAmountPos,
 		srcTokenPos,
 		specialFlag,
-		dexFlag,
+		finalFlag,
 		returnAmountPos,
 	)
 }

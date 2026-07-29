@@ -136,21 +136,21 @@ func TestExecutor03AmountsPacked128SplitSwapSequencing(t *testing.T) {
 	}
 }
 
-func TestExecutor03ValidationAcceptsAmountsPacked128Only(t *testing.T) {
+func TestExecutor010203ValidationAcceptsAmountsPacked128(t *testing.T) {
 	priceRoute, exchangeParams := testExecutor03Packed128RouteAndParams(t, encodeUint128Decimal)
 	orderedLegs, err := getOrderedLegs(testBytecodeBuildInput(priceRoute, exchangeParams))
 	if err != nil {
 		t.Fatalf("getOrderedLegs() error = %v", err)
 	}
 
-	if err := NewExecutor03Builder(testEncodingContext()).validatePhase2dScope(priceRoute, orderedLegs, nil); err != nil {
+	if err := NewExecutor03Builder(testEncodingContext()).validateExecutor03Input(priceRoute, orderedLegs, nil); err != nil {
 		t.Fatalf("Executor03 valid amountsPacked128 rejected: %v", err)
 	}
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err == nil {
-		t.Fatalf("Executor01 accepted amountsPacked128")
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err != nil {
+		t.Fatalf("Executor01 valid amountsPacked128 rejected: %v", err)
 	}
-	if err := NewExecutor02Builder(testEncodingContext()).validatePhase2cScope(priceRoute, exchangeParams); err == nil {
-		t.Fatalf("Executor02 accepted amountsPacked128")
+	if err := NewExecutor02Builder(testEncodingContext()).validateExecutor02Input(priceRoute, exchangeParams); err != nil {
+		t.Fatalf("Executor02 valid amountsPacked128 rejected: %v", err)
 	}
 }
 

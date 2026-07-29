@@ -38,7 +38,7 @@ func TestExecutor01ValidationAcceptsSkipApprovalAndNormalizedSpender(t *testing.
 	exchangeParams[0].SkipApproval = &skipApproval
 	exchangeParams[0].Spender = &spender
 
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err != nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err != nil {
 		t.Fatalf("Executor01 valid skipApproval+spender rejected: %v", err)
 	}
 	if _, err := NewExecutor01Builder(testEncodingContext()).BuildBytecode(
@@ -49,7 +49,7 @@ func TestExecutor01ValidationAcceptsSkipApprovalAndNormalizedSpender(t *testing.
 
 	skipApproval = false
 	exchangeParams[0].SkipApproval = &skipApproval
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err == nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err == nil {
 		t.Fatalf("Executor01 accepted spender without approveData or skipApproval")
 	}
 
@@ -57,7 +57,7 @@ func TestExecutor01ValidationAcceptsSkipApprovalAndNormalizedSpender(t *testing.
 		Target: spender,
 		Token:  testSrcToken,
 	}
-	if err := NewExecutor01Builder(testEncodingContext()).validatePhase2eScope(priceRoute, exchangeParams, nil); err != nil {
+	if err := NewExecutor01Builder(testEncodingContext()).validateExecutor01Input(priceRoute, exchangeParams, nil); err != nil {
 		t.Fatalf("Executor01 valid spender+approveData rejected: %v", err)
 	}
 	if _, err := NewExecutor01Builder(testEncodingContext()).BuildBytecode(
