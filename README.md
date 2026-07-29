@@ -11,7 +11,7 @@ encoding, a small DEX encoder registry, and Augustus approval checking helpers.
 From the consuming service:
 
 ```bash
-go get github.com/VeloraDEX/velora-dex-lib@v0.1.0
+go get github.com/VeloraDEX/velora-dex-lib@v0.2.0
 ```
 
 Use a version tag in production. During active development a branch or commit
@@ -31,6 +31,26 @@ path through private-module settings such as `GOPRIVATE`.
 
 See [`docs/TXBUILDER_USAGE.md`](docs/TXBUILDER_USAGE.md) for detailed
 construction, dependency wiring, and runtime integration notes.
+
+## Legacy Encoding Parity
+
+As of `v0.2.0`, executor bytecode is byte-compatible with the legacy
+TypeScript `paraswap-dex-lib` V6 encoding, including its quirks (V8 exchange
+ordering on Executor03, `insertFromAmountPos` truthiness, negative `int256`
+amount positions).
+
+All `DexExchangeParam` fields consumed by the V6 path are supported on
+Executor01/02/03: `dexFuncHasRecipient`, `needWrapNative`, `needUnwrapNative`,
+custom `wethAddress`, `amountsPacked128`, `returnAmountPos` /
+`insertFromAmountPos` overrides, `transferSrcTokenBeforeSwap`,
+`sendEthButSupportsInsertFromAmount`, `specialDexFlag` (whitelisted values),
+and `permit2Approval`.
+
+Known gap: revertable fallback groups (`SpecialDex = 0xff`) are not ported.
+The route input types do not model `fallback` swap-exchange alternatives, so
+any `fallback` field in route JSON is silently ignored and only the primary
+exchange is encoded — do not route fallback-carrying price routes through
+this module until that support lands.
 
 ## Basic Usage
 
