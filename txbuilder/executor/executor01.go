@@ -120,10 +120,9 @@ func (b Executor01Builder) validatePhase2eScope(
 			if !exchangeParam.NeedWrapNative.Value {
 				return fmt.Errorf("Executor01 needWrapNative=false is not implemented in Phase 2e")
 			}
-			if boolValue(exchangeParam.NeedUnwrapNative) && isWETHAddress(swap.DestToken, b.context) {
-				return fmt.Errorf("Executor01 WETH-destination needUnwrapNative is not implemented in Phase 2e")
-			}
-			if boolValue(exchangeParam.NeedUnwrapNative) && !isWETHAddress(swap.SrcToken, b.context) {
+			if boolValue(exchangeParam.NeedUnwrapNative) &&
+				!isWETHAddress(swap.SrcToken, b.context) &&
+				!isWETHAddress(swap.DestToken, b.context) {
 				return fmt.Errorf("Executor01 needUnwrapNative is not implemented in Phase 2e")
 			}
 			if exchangeParam.WethAddress != nil {
@@ -461,6 +460,9 @@ func (b Executor01Builder) buildSingleSwapCallData(
 	isWETHSrcUnwrap :=
 		boolValue(curExchangeParam.NeedUnwrapNative) &&
 			isWETHAddress(swap.SrcToken, b.context)
+	isWETHDestWrap :=
+		boolValue(curExchangeParam.NeedUnwrapNative) &&
+			isWETHAddress(swap.DestToken, b.context)
 	if isWETHSrcUnwrap {
 		withdrawRawCalldata, err := buildERC20WithdrawCalldata(swap.SwapExchanges[0].SrcAmount)
 		if err != nil {
@@ -474,6 +476,27 @@ func (b Executor01Builder) buildSingleSwapCallData(
 			return "", err
 		}
 		swapCallData, err = concatHex(string(withdrawCallData), string(dexCallData))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// DEX returns native ETH on a WETH-dest hop; wrap it after the swap.
+	if isWETHDestWrap {
+		depositRawCalldata, err := buildERC20DepositCalldata()
+		if err != nil {
+			return "", err
+		}
+		depositCallData, err := buildWrapEthCallData(
+			getWETHAddress(curExchangeParam, b.context),
+			depositRawCalldata,
+			sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
+			0,
+		)
+		if err != nil {
+			return "", err
+		}
+		swapCallData, err = concatHex(string(swapCallData), string(depositCallData))
 		if err != nil {
 			return "", err
 		}
@@ -636,16 +659,20 @@ func (b Executor01Builder) buildDexCallData(
 
 	fromAmountPos := 0
 	if insertFromAmount {
-		if exchangeParam.InsertFromAmountPos != nil {
+		// Zero is falsy in the legacy truthiness check, so it falls through
+		// to the calldata search.
+		if exchangeParam.InsertFromAmountPos != nil && *exchangeParam.InsertFromAmountPos != 0 {
 			fromAmountPos = *exchangeParam.InsertFromAmountPos
 		} else {
-			encodedAmount, err := encodeUint256Decimal(
+			var err error
+			fromAmountPos, err = findAmountPosWithFallback(
+				exchangeData,
 				swap.SwapExchanges[swapExchangeIndex].SrcAmount,
+				boolValue(exchangeParam.AmountsPacked128),
 			)
 			if err != nil {
 				return "", err
 			}
-			fromAmountPos = findAmountPosInCalldata(exchangeData, encodedAmount)
 		}
 	}
 

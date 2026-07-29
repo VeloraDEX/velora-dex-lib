@@ -95,22 +95,59 @@ func (b Executor02Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	}
 
 	if needWrapEth && routeNeedsRootWrapEth {
-		if isMegaSwap || isMultiSwap {
-			depositCallData, err := buildWrapEthCallData(
-				b.context.WrappedNativeTokenAddress,
-				maybeWethCallData.Deposit.Calldata,
-				sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
-				0,
-			)
+		depositCallData, err := buildWrapEthCallData(
+			b.context.WrappedNativeTokenAddress,
+			maybeWethCallData.Deposit.Calldata,
+			sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
+			0,
+		)
+		if err != nil {
+			return "", err
+		}
+
+		// Single-swap routes prefix the deposit with [len(16)][percent*100(16)]
+		// so the executor can slice the wrapped amount for partial-wrap splits.
+		if !isMegaSwap && !isMultiSwap {
+			swap := priceRoute.BestRoute[0].Swaps[0]
+			everyExchangeNeedsWrapNative := true
+			for _, exchangeParam := range exchangeParams {
+				if !exchangeParam.NeedWrapNative.Value {
+					everyExchangeNeedsWrapNative = false
+					break
+				}
+			}
+			percent := 100.0
+			if !everyExchangeNeedsWrapNative {
+				percent = 0
+				for index, swapExchange := range swap.SwapExchanges {
+					if index < len(exchangeParams) && exchangeParams[index].NeedWrapNative.Value {
+						percent += swapExchange.Percent
+					}
+				}
+			}
+
+			depositLength, err := hexDataLength(string(depositCallData))
 			if err != nil {
 				return "", err
 			}
-			swapsCalldata, err = concatHex(string(depositCallData), string(swapsCalldata))
+			lengthField, err := leftPadUint(depositLength, 16)
 			if err != nil {
 				return "", err
 			}
-		} else {
-			return "", fmt.Errorf("Executor02 non-multi root deposit wrapper is not implemented in Phase 2c")
+			percentField, err := leftPadUint(int(math.Round(100*percent)), 16)
+			if err != nil {
+				return "", err
+			}
+			prefixed, err := concatHex(lengthField, percentField, string(depositCallData))
+			if err != nil {
+				return "", err
+			}
+			depositCallData = prefixed
+		}
+
+		swapsCalldata, err = concatHex(string(depositCallData), string(swapsCalldata))
+		if err != nil {
+			return "", err
 		}
 	}
 
@@ -526,14 +563,20 @@ func (b Executor02Builder) buildDexCallData(
 
 	fromAmountPos := 0
 	if insertFromAmount {
-		if exchangeParam.InsertFromAmountPos != nil {
+		// Zero is falsy in the legacy truthiness check, so it falls through
+		// to the calldata search.
+		if exchangeParam.InsertFromAmountPos != nil && *exchangeParam.InsertFromAmountPos != 0 {
 			fromAmountPos = *exchangeParam.InsertFromAmountPos
 		} else {
-			encodedAmount, err := encodeUint256Decimal(swapExchange.SrcAmount)
+			var err error
+			fromAmountPos, err = findAmountPosWithFallback(
+				exchangeData,
+				swapExchange.SrcAmount,
+				boolValue(exchangeParam.AmountsPacked128),
+			)
 			if err != nil {
 				return "", err
 			}
-			fromAmountPos = findAmountPosInCalldata(exchangeData, encodedAmount)
 		}
 	}
 

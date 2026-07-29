@@ -167,6 +167,14 @@ func TestExecutor010203InsertFromAmountPosOverridePacked(t *testing.T) {
 			exchangeParams[0].ReturnAmountPos = nil
 			exchangeParams[0].InsertFromAmountPos = &insertFromAmountPos
 
+			// Legacy treats 0 as unset (falsy truthiness check), falling
+			// through to the calldata search, which finds srcAmount right
+			// after the 4-byte selector.
+			wantPos := insertFromAmountPos
+			if insertFromAmountPos == 0 {
+				wantPos = 4
+			}
+
 			callData, err := NewExecutor01Builder(testEncodingContext()).buildDexCallData(
 				priceRoute,
 				exchangeParams,
@@ -179,7 +187,7 @@ func TestExecutor010203InsertFromAmountPosOverridePacked(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Executor01 buildDexCallData() error = %v", err)
 			}
-			assertExecutor0102FromAmountPos(t, callData, insertFromAmountPos)
+			assertExecutor0102FromAmountPos(t, callData, wantPos)
 
 			callData, err = NewExecutor02Builder(testEncodingContext()).buildDexCallData(
 				priceRoute,
@@ -193,7 +201,7 @@ func TestExecutor010203InsertFromAmountPosOverridePacked(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Executor02 buildDexCallData() error = %v", err)
 			}
-			assertExecutor0102FromAmountPos(t, callData, insertFromAmountPos)
+			assertExecutor0102FromAmountPos(t, callData, wantPos)
 
 			callData, err = NewExecutor03Builder(testEncodingContext()).buildDexCallData(
 				priceRoute,
@@ -208,7 +216,7 @@ func TestExecutor010203InsertFromAmountPosOverridePacked(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Executor03 buildDexCallData() error = %v", err)
 			}
-			assertExecutor03FromAmountPos(t, callData, insertFromAmountPos)
+			assertExecutor03FromAmountPos(t, callData, wantPos)
 			assertExecutor03ToAmountPos(t, callData, 36)
 		})
 	}

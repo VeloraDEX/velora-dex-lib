@@ -288,6 +288,34 @@ func buildExecutor03TopLevelBytecode(swapsCalldata resolved.HexBytes) (resolved.
 	return concatHex(offset, length, string(swapsCalldata))
 }
 
+// findAmountPosWithFallback mirrors ExecutorBytecodeBuilder.findAmountPosWithFallback:
+// search for the positive uint256 encoding first and retry with the negative
+// int256 encoding when the amount is not present (Curve-family int256 args).
+func findAmountPosWithFallback(
+	exchangeData resolved.HexBytes,
+	amount resolved.DecimalString,
+	is128 bool,
+) (int, error) {
+	if is128 {
+		return findAmount128PosInCalldata(exchangeData, amount)
+	}
+
+	positiveEncoded, err := encodeUint256Decimal(amount)
+	if err != nil {
+		return 0, err
+	}
+	pos := findAmountPosInCalldata(exchangeData, positiveEncoded)
+	if pos < len(string(exchangeData))/2 {
+		return pos, nil
+	}
+
+	negativeEncoded, err := encodeNegativeInt256Decimal(amount)
+	if err != nil {
+		return 0, err
+	}
+	return findAmountPosInCalldata(exchangeData, negativeEncoded), nil
+}
+
 func findAmountPosInCalldata(exchangeData resolved.HexBytes, encodedAmount string) int {
 	rawCalldata := strip0x(string(exchangeData))
 	rawAmount := strip0x(encodedAmount)

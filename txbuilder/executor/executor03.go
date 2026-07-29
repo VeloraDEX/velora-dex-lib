@@ -3,7 +3,7 @@ package executor
 import (
 	"fmt"
 	"math"
-	"sort"
+
 	"strings"
 
 	"github.com/VeloraDEX/velora-dex-lib/txbuilder/resolved"
@@ -133,19 +133,25 @@ func (b Executor03Builder) validatePhase2dScope(
 func (b Executor03Builder) orderExchanges(
 	orderedLegs []orderedExecutorLeg,
 ) []executor03OrderedExchange {
-	ordered := make([]executor03OrderedExchange, 0, len(orderedLegs))
+	// TS parity: legacy sorts with the single-argument comparator
+	// `e => e.needWrapNative ? 1 : -1`, which under V8's binary insertion
+	// sort moves every non-wrap exchange to the front one by one — non-wrap
+	// exchanges come out in REVERSE input order, wrap exchanges keep theirs.
+	nonWrap := make([]executor03OrderedExchange, 0, len(orderedLegs))
+	wrap := make([]executor03OrderedExchange, 0, len(orderedLegs))
 	for _, orderedLeg := range orderedLegs {
-		ordered = append(ordered, executor03OrderedExchange{
+		entry := executor03OrderedExchange{
 			exchangeParam:     orderedLeg.ResolvedLeg.ExchangeParam,
 			swapExchange:      orderedLeg.SwapExchange,
 			swapExchangeIndex: orderedLeg.SwapExchangeIndex,
-		})
+		}
+		if entry.exchangeParam.NeedWrapNative.Value {
+			wrap = append(wrap, entry)
+		} else {
+			nonWrap = append([]executor03OrderedExchange{entry}, nonWrap...)
+		}
 	}
-	sort.SliceStable(ordered, func(i, j int) bool {
-		return !ordered[i].exchangeParam.NeedWrapNative.Value &&
-			ordered[j].exchangeParam.NeedWrapNative.Value
-	})
-	return ordered
+	return append(nonWrap, wrap...)
 }
 
 func (b Executor03Builder) buildFlags(
@@ -514,10 +520,12 @@ func (b Executor03Builder) buildDexCallData(
 	fromAmountPos := 0
 	toAmountPos := 0
 	if insertAmount {
-		if exchangeParam.InsertFromAmountPos != nil {
+		// Zero is falsy in the legacy truthiness check, so it falls through
+		// to the calldata search.
+		if exchangeParam.InsertFromAmountPos != nil && *exchangeParam.InsertFromAmountPos != 0 {
 			fromAmountPos = *exchangeParam.InsertFromAmountPos
 		} else {
-			fromAmountPos, err = b.findAmountPosWithFallback(
+			fromAmountPos, err = findAmountPosWithFallback(
 				exchangeData,
 				swapExchange.SrcAmount,
 				boolValue(exchangeParam.AmountsPacked128),
@@ -526,7 +534,7 @@ func (b Executor03Builder) buildDexCallData(
 				return "", err
 			}
 		}
-		toAmountPos, err = b.findAmountPosWithFallback(
+		toAmountPos, err = findAmountPosWithFallback(
 			exchangeData,
 			swapExchange.DestAmount,
 			boolValue(exchangeParam.AmountsPacked128),
@@ -555,31 +563,6 @@ func (b Executor03Builder) buildDexCallData(
 		finalFlag,
 		toAmountPos,
 	)
-}
-
-func (b Executor03Builder) findAmountPosWithFallback(
-	exchangeData resolved.HexBytes,
-	amount resolved.DecimalString,
-	is128 bool,
-) (int, error) {
-	if is128 {
-		return findAmount128PosInCalldata(exchangeData, amount)
-	}
-
-	positiveEncoded, err := encodeUint256Decimal(amount)
-	if err != nil {
-		return 0, err
-	}
-	pos := findAmountPosInCalldata(exchangeData, positiveEncoded)
-	if pos < len(string(exchangeData))/2 {
-		return pos, nil
-	}
-
-	negativeEncoded, err := encodeNegativeInt256Decimal(amount)
-	if err != nil {
-		return 0, err
-	}
-	return findAmountPosInCalldata(exchangeData, negativeEncoded), nil
 }
 
 func (b Executor03Builder) addMetadata(
