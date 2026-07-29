@@ -100,9 +100,6 @@ func (b Executor03Builder) validatePhase2dScope(
 			return fmt.Errorf("Executor03 Phase 2d supports only route position 0:0:*")
 		}
 		exchangeParam := orderedLeg.ResolvedLeg.ExchangeParam
-		if !exchangeParam.DexFuncHasRecipient {
-			return fmt.Errorf("Executor03 dexFuncHasRecipient=false is not implemented in Phase 2d")
-		}
 		if exchangeParam.WethAddress != nil {
 			swap := orderedLeg.Swap
 			if boolValue(exchangeParam.NeedUnwrapNative) ||

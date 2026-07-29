@@ -164,7 +164,7 @@ func (b Executor02Builder) validatePhase2cScope(
 	priceRoute executorRoute,
 	exchangeParams []resolved.DexExchangeBuildParam,
 ) error {
-	for index, exchangeParam := range exchangeParams {
+	for _, exchangeParam := range exchangeParams {
 		if exchangeParam.Spender != nil {
 			if exchangeParam.ApproveData == nil &&
 				!boolValue(exchangeParam.SkipApproval) {
@@ -182,17 +182,6 @@ func (b Executor02Builder) validatePhase2cScope(
 		}
 		if err := validateSpecialDexFlagOverride("Executor02", exchangeParam.SpecialDexFlag); err != nil {
 			return err
-		}
-		if !exchangeParam.DexFuncHasRecipient {
-			routePosition, ok := routePositionForExchangeParamIndex(priceRoute, index)
-			if !ok {
-				return fmt.Errorf("missing route position for exchange param index %d", index)
-			}
-			isLastSwap := routePosition.SwapIndex ==
-				len(priceRoute.BestRoute[routePosition.RouteIndex].Swaps)-1
-			if !isLastSwap || routePosition.Swap.DestToken != priceRoute.DestToken {
-				return fmt.Errorf("Executor02 non-terminal dexFuncHasRecipient=false is not implemented in Phase 2c")
-			}
 		}
 	}
 	return nil
@@ -1486,31 +1475,6 @@ func exchangeParamIndexForPosition(
 		}
 	}
 	return -1
-}
-
-func routePositionForExchangeParamIndex(
-	priceRoute executorRoute,
-	exchangeParamIndex int,
-) (resolved.RoutePlanExchange, bool) {
-	index := 0
-	for routeIndex, route := range priceRoute.BestRoute {
-		for swapIndex, swap := range route.Swaps {
-			for swapExchangeIndex, swapExchange := range swap.SwapExchanges {
-				if index == exchangeParamIndex {
-					return resolved.RoutePlanExchange{
-						RouteIndex:        routeIndex,
-						SwapIndex:         swapIndex,
-						SwapExchangeIndex: swapExchangeIndex,
-						Route:             route,
-						Swap:              swap,
-						SwapExchange:      swapExchange,
-					}, true
-				}
-				index++
-			}
-		}
-	}
-	return resolved.RoutePlanExchange{}, false
 }
 
 func exchangeParamIndexesForSwap(

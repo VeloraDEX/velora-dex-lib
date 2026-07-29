@@ -58,8 +58,8 @@ func (b Executor01Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 	}
 
 	lastParam := exchangeParams[len(exchangeParams)-1]
-	// Phase 2e rejects dexFuncHasRecipient=false before bytecode generation.
-	// Re-verify these no-recipient trailers before relaxing that scope guard.
+	// No-recipient dexes leave the output on the executor; forward it to
+	// Augustus with an ERC20 transfer trailer (TS parity).
 	if !lastParam.DexFuncHasRecipient && !isETHAddress(priceRoute.DestToken) {
 		transferCallData, err := buildERC20TransferCalldata(
 			b.context.AugustusV6Address,
@@ -80,8 +80,8 @@ func (b Executor01Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInp
 			return "", err
 		}
 	}
-	// Final native-send trailer is live for ETH-destination WETH withdraw
-	// fixtures; the no-recipient ETH-destination arm remains scope-guarded.
+	// Final native-send trailer: ETH-destination WETH withdraw, or a
+	// no-recipient dex whose native output stays on the executor.
 	if (input.WethPlan != nil && input.WethPlan.Withdraw != nil && isETHAddress(priceRoute.DestToken)) ||
 		(!lastParam.DexFuncHasRecipient && isETHAddress(priceRoute.DestToken)) {
 		finalSpecialFlagCalldata, err := buildFinalSpecialFlagCalldata(b.context)
@@ -119,9 +119,6 @@ func (b Executor01Builder) validatePhase2eScope(
 			exchangeParam := exchangeParams[exchangeParamIndex]
 			if !exchangeParam.NeedWrapNative.Value {
 				return fmt.Errorf("Executor01 needWrapNative=false is not implemented in Phase 2e")
-			}
-			if !exchangeParam.DexFuncHasRecipient {
-				return fmt.Errorf("Executor01 dexFuncHasRecipient=false is not implemented in Phase 2e")
 			}
 			if boolValue(exchangeParam.NeedUnwrapNative) && isWETHAddress(swap.DestToken, b.context) {
 				return fmt.Errorf("Executor01 WETH-destination needUnwrapNative is not implemented in Phase 2e")
