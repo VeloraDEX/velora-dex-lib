@@ -99,10 +99,10 @@ type PriceRouteSwapExchange struct {
 	DestAmount resolved.DecimalString `json:"destAmount"`
 	Data       json.RawMessage        `json:"data,omitempty"`
 
-	// The dex-specific Data blob carries pool addresses for some exchanges and
-	// not others, so this is the only field that reliably answers "which pool
-	// did this leg touch" in a post-mortem.
-	PoolAddresses []resolved.Address `json:"poolAddresses,omitempty"`
+	// The dex-specific Data blob identifies the pool for some exchanges and not
+	// others, so this is the only field that reliably answers "which pool did
+	// this leg touch" in a post-mortem.
+	PoolIdentifiers []string `json:"poolIdentifiers,omitempty"`
 }
 
 type Deps struct {
