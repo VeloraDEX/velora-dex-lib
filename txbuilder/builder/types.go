@@ -33,6 +33,13 @@ type BuildRequest struct {
 	GetDexParamOptions   *GetDexParamOptions     `json:"getDexParamOptions,omitempty"`
 }
 
+// PriceRoute mirrors the priceRoute document /quote issues. Everything below
+// BestRoute is declared for fidelity rather than for encoding: BuildGeneric
+// reads none of it, but a BuildRequest is persisted verbatim as the
+// post-mortem record of a build, and an undeclared field is a field that
+// record loses. `others` stays undeclared on purpose — it is the bulkiest part
+// of a price route, it has no bearing on what was encoded, and dropping it at
+// the type is what already satisfies the "clear others before build" rule.
 type PriceRoute struct {
 	Network        int                    `json:"network"`
 	BlockNumber    int64                  `json:"blockNumber"`
@@ -45,6 +52,28 @@ type PriceRoute struct {
 	SrcUSD         *string                `json:"srcUSD,omitempty"`
 	DestUSD        *string                `json:"destUSD,omitempty"`
 	BestRoute      []PriceRouteRoute      `json:"bestRoute"`
+
+	// Pointers throughout: a zero is meaningful for every one of these
+	// (0-decimal tokens exist, partnerFee is 0 on most trades, and
+	// maxImpactReached is usually false), so a value type with omitempty
+	// would record "absent" for the common case.
+	SrcDecimals        *int                    `json:"srcDecimals,omitempty"`
+	DestDecimals       *int                    `json:"destDecimals,omitempty"`
+	DestAmountAfterFee *resolved.DecimalString `json:"destAmountAfterFee,omitempty"`
+	GasCost            *resolved.DecimalString `json:"gasCost,omitempty"`
+	GasCostUSD         *string                 `json:"gasCostUSD,omitempty"`
+	Version            *string                 `json:"version,omitempty"`
+	ContractAddress    *resolved.Address       `json:"contractAddress,omitempty"`
+	TokenTransferProxy *resolved.Address       `json:"tokenTransferProxy,omitempty"`
+	Partner            *string                 `json:"partner,omitempty"`
+	PartnerFee         *float64                `json:"partnerFee,omitempty"`
+	MaxImpactReached   *bool                   `json:"maxImpactReached,omitempty"`
+
+	// Hmac survives a round the other fields do not: the API re-decodes this
+	// struct from the canonical bytes a signature was verified over, and
+	// verification strips the signature to reproduce them, so it is carried
+	// over from the parse of the original body instead.
+	Hmac *string `json:"hmac,omitempty"`
 }
 
 type PriceRouteRoute struct {
@@ -58,6 +87,9 @@ type PriceRouteSwap struct {
 	SrcAmount     *resolved.DecimalString  `json:"srcAmount,omitempty"`
 	DestAmount    *resolved.DecimalString  `json:"destAmount,omitempty"`
 	SwapExchanges []PriceRouteSwapExchange `json:"swapExchanges"`
+
+	SrcDecimals  *int `json:"srcDecimals,omitempty"`
+	DestDecimals *int `json:"destDecimals,omitempty"`
 }
 
 type PriceRouteSwapExchange struct {
@@ -66,6 +98,11 @@ type PriceRouteSwapExchange struct {
 	SrcAmount  resolved.DecimalString `json:"srcAmount"`
 	DestAmount resolved.DecimalString `json:"destAmount"`
 	Data       json.RawMessage        `json:"data,omitempty"`
+
+	// The dex-specific Data blob identifies the pool for some exchanges and not
+	// others, so this is the only field that reliably answers "which pool did
+	// this leg touch" in a post-mortem.
+	PoolIdentifiers []string `json:"poolIdentifiers,omitempty"`
 }
 
 type Deps struct {
