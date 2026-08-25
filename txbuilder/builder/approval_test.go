@@ -138,6 +138,10 @@ func testApprovalRouteAndLeg() (PriceRoute, resolved.RoutePlan, []resolved.Resol
 						DestToken:  testApprovalDestToken,
 						SrcAmount:  ptr(srcAmount),
 						DestAmount: ptr(destAmount),
+						// Required to build the RFQ preprocess context, which
+						// buildResolvedLegs assembles for every leg.
+						SrcDecimals:  ptr(18),
+						DestDecimals: ptr(6),
 						SwapExchanges: []PriceRouteSwapExchange{
 							{
 								Exchange:   "test",

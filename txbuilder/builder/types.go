@@ -12,10 +12,15 @@ import (
 // func BuildGeneric(ctx context.Context, req BuildRequest, deps Deps) (resolved.BuildOutput, error)
 
 type BuildRequest struct {
-	PriceRoute           PriceRoute              `json:"priceRoute"`
-	MinMaxAmount         resolved.DecimalString  `json:"minMaxAmount"`
-	QuotedAmount         *resolved.DecimalString `json:"quotedAmount,omitempty"`
-	UserAddress          resolved.Address        `json:"userAddress"`
+	PriceRoute   PriceRoute              `json:"priceRoute"`
+	MinMaxAmount resolved.DecimalString  `json:"minMaxAmount"`
+	QuotedAmount *resolved.DecimalString `json:"quotedAmount,omitempty"`
+	UserAddress  resolved.Address        `json:"userAddress"`
+	// TxOrigin is the account that will send the transaction, which is not
+	// always the account being swapped for. RFQ dexes blacklist by it
+	// separately from UserAddress, so it has to travel as its own field.
+	// MapToBuildRequest defaults it to UserAddress, matching legacy.
+	TxOrigin             resolved.Address        `json:"txOrigin,omitempty"`
 	ReferrerAddress      *resolved.Address       `json:"referrerAddress,omitempty"`
 	PartnerAddress       resolved.Address        `json:"partnerAddress"`
 	PartnerFeePercent    resolved.DecimalString  `json:"partnerFeePercent"`
@@ -31,6 +36,11 @@ type BuildRequest struct {
 	UUID                 string                  `json:"uuid"`
 	Beneficiary          *resolved.Address       `json:"beneficiary,omitempty"`
 	GetDexParamOptions   *GetDexParamOptions     `json:"getDexParamOptions,omitempty"`
+
+	// Special is the partner's `special` flag from partners config, resolved by
+	// the API layer. GenericRFQ forwards it to its firm-quote request. It is a
+	// property of (network, partner), so it is route-level rather than per-leg.
+	Special bool `json:"special,omitempty"`
 }
 
 // PriceRoute mirrors the priceRoute document /quote issues. Everything below
@@ -121,7 +131,38 @@ type Options struct {
 }
 
 type GetDexParamOptions struct {
-	NowTimestampMs *uint64 `json:"nowTimestampMs,omitempty"`
+	NowTimestampMs *uint64                `json:"nowTimestampMs,omitempty"`
+	PreProcess     *GetDexParamPreProcess `json:"preProcess,omitempty"`
+}
+
+// GetDexParamPreProcess is the context an RFQ dex needs to run its own
+// preProcessTransaction from inside getDexParam, for callers that never ran the
+// preProcessTransaction step separately. It mirrors dex-lib's
+// GetDexParamPreProcessOptions field for field; the receiving schema rejects
+// unknown keys, so nothing may be added here that dex-lib does not declare.
+//
+// The tokens and amounts are the swap leg's own, not the ones on the enclosing
+// dex-param request: those carry WETH-substituted addresses without decimals,
+// and a destAmount of "1" on SELL.
+type GetDexParamPreProcess struct {
+	SrcToken                 PreProcessToken        `json:"srcToken"`
+	DestToken                PreProcessToken        `json:"destToken"`
+	SrcAmount                resolved.DecimalString `json:"srcAmount"`
+	DestAmount               resolved.DecimalString `json:"destAmount"`
+	SlippageFactor           string                 `json:"slippageFactor"`
+	TxOrigin                 resolved.Address       `json:"txOrigin"`
+	UserAddress              resolved.Address       `json:"userAddress"`
+	ExecutionContractAddress resolved.Address       `json:"executionContractAddress"`
+	Recipient                resolved.Address       `json:"recipient"`
+	Version                  string                 `json:"version"`
+	Partner                  string                 `json:"partner,omitempty"`
+	Special                  bool                   `json:"special,omitempty"`
+}
+
+// PreProcessToken is a dex-lib Token narrowed to what an RFQ preprocess reads.
+type PreProcessToken struct {
+	Address  resolved.Address `json:"address"`
+	Decimals int              `json:"decimals"`
 }
 
 type DexRegistry interface {
