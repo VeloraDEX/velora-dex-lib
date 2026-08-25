@@ -103,6 +103,18 @@ type PriceRouteSwapExchange struct {
 	// others, so this is the only field that reliably answers "which pool did
 	// this leg touch" in a post-mortem.
 	PoolIdentifiers []string `json:"poolIdentifiers,omitempty"`
+
+	// TargetExchange is the contract this leg's swap call targets
+	// (router/settlement), reported by firm-quote venues at pricing time so a
+	// post-mortem can attribute an on-chain revert to the venue contract.
+	TargetExchange resolved.Address `json:"targetExchange,omitempty"`
+
+	// Fallback is the alternative AMM execution pricing attached to a
+	// firm-quote leg, quoted at the same slice. BuildGeneric does not read it
+	// yet — it is declared so the persisted build record keeps it and so the
+	// coming revertable-group encoding finds it at the type it already
+	// consumes.
+	Fallback *PriceRouteSwapExchange `json:"fallback,omitempty"`
 }
 
 type Deps struct {
