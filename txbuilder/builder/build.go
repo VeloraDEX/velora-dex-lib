@@ -271,6 +271,12 @@ func buildResolvedLegs(
 		if req.PriceRoute.Side == resolved.SideBuy {
 			srcAmountForDex = swapExchange.SrcAmount
 		}
+
+		preProcess, err := buildGetDexParamPreProcess(req, swap, swapExchange, callParams, executorAddress)
+		if err != nil {
+			return nil, err
+		}
+
 		dexParamInput := DexParamInput{
 			NeedWrapNativeInput: needWrapNativeInput,
 			DexKey:              swapExchange.Exchange,
@@ -282,7 +288,7 @@ func buildResolvedLegs(
 			ExecutorAddress:     executorAddress,
 			Side:                req.PriceRoute.Side,
 			Data:                swapExchange.Data,
-			Options:             req.GetDexParamOptions,
+			Options:             withPreProcess(req.GetDexParamOptions, preProcess),
 		}
 		dexParam, err := dexEncoder.GetDexParam(ctx, dexParamInput)
 		if err != nil {
