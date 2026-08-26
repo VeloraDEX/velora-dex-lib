@@ -271,6 +271,14 @@ func validateExchangeParam(exchangeParam DexExchangeBuildParam, prefix string) e
 			return err
 		}
 	}
+	if exchangeParam.FallbackParam != nil {
+		if exchangeParam.FallbackParam.FallbackParam != nil {
+			return fmt.Errorf("%s.fallbackParam must not nest another fallback", prefix)
+		}
+		if err := validateExchangeParam(*exchangeParam.FallbackParam, prefix+".fallbackParam"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
