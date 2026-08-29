@@ -264,7 +264,7 @@ func TestBuildDirectForwardsExplicitPermitAndBeneficiary(t *testing.T) {
 	)
 }
 
-func TestBuildDirectNormalizesUserBeneficiaryToNullAddress(t *testing.T) {
+func TestBuildDirectForwardsUserBeneficiaryVerbatim(t *testing.T) {
 	fixture := loadDirectBuilderTSFixture(t, resolveDirectBuilderFixtureDir(t), "uniswap-v2-sell.json")
 	encoder := &recordingDirectDexEncoder{
 		method: fixture.Orchestration.PriceRoute.ContractMethod,
@@ -288,7 +288,12 @@ func TestBuildDirectNormalizesUserBeneficiaryToNullAddress(t *testing.T) {
 		t.Fatalf("BuildDirect() error = %v", err)
 	}
 
-	assertEqual(t, encoder.got.Beneficiary, resolved.NullAddress, "direct input beneficiary")
+	assertEqual(
+		t,
+		encoder.got.Beneficiary,
+		normalizeAddress(req.UserAddress),
+		"direct input beneficiary",
+	)
 }
 
 func directBuildRequestFromFixture(fixture directBuilderTSFixture) BuildRequest {
