@@ -45,13 +45,18 @@ func resolveQuotedAmount(priceRoute PriceRoute, quotedAmount *resolved.DecimalSt
 	return priceRoute.SrcAmount
 }
 
-func resolveBeneficiary(userAddress resolved.Address, beneficiary *resolved.Address) resolved.Address {
-	if beneficiary != nil &&
-		*beneficiary != resolved.NullAddress &&
-		normalizeAddress(*beneficiary) != normalizeAddress(userAddress) {
-		return normalizeAddress(*beneficiary)
+// resolveBeneficiary forwards the caller's beneficiary verbatim, defaulting to
+// the null address when it is absent. It deliberately does not collapse a
+// beneficiary that equals userAddress back to the null address: the contract
+// treats address(0) as "pay msg.sender", so the two encodings settle the same
+// way, but callers that pass an explicit beneficiary expect to see it in the
+// calldata they simulate and audit. Legacy dropped the same collapse in
+// paraswap-dex-lib fc9f9b92 ("fix: remove beneficiary optimization").
+func resolveBeneficiary(beneficiary *resolved.Address) resolved.Address {
+	if beneficiary == nil || *beneficiary == "" {
+		return resolved.NullAddress
 	}
-	return resolved.NullAddress
+	return normalizeAddress(*beneficiary)
 }
 
 func resolvePermit(permit *resolved.HexBytes) resolved.HexBytes {

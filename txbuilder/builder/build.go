@@ -150,7 +150,7 @@ func buildGenericInput(ctx context.Context, req BuildRequest, deps Deps) (resolv
 		ContractMethod:            req.PriceRoute.ContractMethod,
 		BlockNumber:               req.PriceRoute.BlockNumber,
 		UserAddress:               req.UserAddress,
-		Beneficiary:               resolveBeneficiary(req.UserAddress, req.Beneficiary),
+		Beneficiary:               resolveBeneficiary(req.Beneficiary),
 		Permit:                    resolvePermit(req.Permit),
 		UUID:                      req.UUID,
 		Fee:                       feeRaw,

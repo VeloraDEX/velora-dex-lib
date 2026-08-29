@@ -73,7 +73,7 @@ func BuildDirect(ctx context.Context, req BuildRequest, deps Deps) (resolved.Dir
 		Permit:         resolvePermit(req.Permit),
 		UUID:           req.UUID,
 		PartnerAndFee:  resolved.DecimalString(partnerAndFee.String()),
-		Beneficiary:    resolveBeneficiary(req.UserAddress, req.Beneficiary),
+		Beneficiary:    resolveBeneficiary(req.Beneficiary),
 		BlockNumber:    req.PriceRoute.BlockNumber,
 	}
 
