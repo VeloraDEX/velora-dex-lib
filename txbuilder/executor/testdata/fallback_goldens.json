@@ -1,0 +1,1315 @@
+{
+  "tsCommit": "0d3d5b2125cec415c324789133cbd60f2049c7f2",
+  "context": {
+    "network": 1,
+    "augustusV6Address": "0x6a000f20005980200259b80c5102003040001068",
+    "wrappedNativeTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+  },
+  "scenarios": [
+    {
+      "name": "e01-simple-group",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x2222222222222222222222222222222222222222",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001440000000000000000000000000000000000000000000000e40000000000ff0000000000000000000000000000000000000000000000000000000000000000006000000060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000004000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000004000040000ff00000300000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00"
+    },
+    {
+      "name": "e01-recipient-mismatch",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x2222222222222222222222222222222222222222",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": false,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001e40000000000000000000000000000000000000000000001840000000000ff0000000000000000000000000000000000000000000000000000000000000000006000000100bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000004000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000222222222222222222222222222222222222222222222222222222222222222222222222222222220000006000240000ff00000300000000000000000000000000000000000000000000000000000000a9059cbb0000000000000000000000006a000f20005980200259b80c510200304000106800000000000000000000000000000000000000000000000006f05b59d3b20000"
+    },
+    {
+      "name": "e01-final-eth-dest-mixed-wrapness",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002040000000000000000000000000000000000000000000001a40000000000ff0000000000000000000000000000000000000000000000000000000000000000006000000120bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000004000040000ff00000700000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b200006a000f20005980200259b80c51020030400010680000002000000000ff0400090000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "e01-multihop-final-eth-dest",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x2222222222222222222222222222222222222222",
+        "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": false,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000284cccccccccccccccccccccccccccccccccccccccc0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000000000000000000000000001a40000000000ff0000000000000000000000000000000000000000000000000000000000000000006000000120bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000004000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b200006a000f20005980200259b80c51020030400010680000002000000000ff0400090000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "e01-mid-route-raw-weth-rawnext",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x2222222222222222222222222222222222222222",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002240000000000000000000000000000000000000000000001640000000000ff00000000000000000000000000000000000000000000000000000000000000000060000000e0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000004000040000ff00000700000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000cccccccccccccccccccccccccccccccccccccccc0000004000000000ff00000900000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca00"
+    },
+    {
+      "name": "e01-mid-route-raw-weth-wethnext",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x2222222222222222222222222222222222222222",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002240000000000000000000000000000000000000000000001640000000000ff00000000000000000000000000000000000000000000000000000000000000000060000000e0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000004000040000ff00000700000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000cccccccccccccccccccccccccccccccccccccccc0000004000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca00"
+    },
+    {
+      "name": "e01-mid-route-weth-raw-wethnext",
+      "executor": "Executor01",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x2222222222222222222222222222222222222222",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002040000000000000000000000000000000000000000000001440000000000ff00000000000000000000000000000000000000000000000000000000000000000080000000a0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000006000040024ff00000b00000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000004000040000ff00000700000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000002000040000ff00000900000000000000000000000000000000000000000000000000000000d0e30db0cccccccccccccccccccccccccccccccccccccccc0000004000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca00"
+    },
+    {
+      "name": "e02-whole-hop-mid-route",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x1111111111111111111111111111111111111111",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "bytecode": "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000026400000000000000000000000000000204000000000000000000000000000027100000000000000000000000000000000000000000000001640000008800ff000b00000000000000000000000000000000000000000000000000000000000000a0000000a0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222cccccccccccccccccccccccccccccccccccccccc0000006000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222"
+    },
+    {
+      "name": "e02-whole-hop-final",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x1111111111111111111111111111111111111111",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "bytecode": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000244000000000000000000000000000001e400000000000000000000000000002710cccccccccccccccccccccccccccccccccccccccc0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000111111111111111111111111111111111111111100000000000000000000000022222222222222222222222222222222222222220000000000000000000000000000000000000000000001240000000000ff0003000000000000000000000000000000000000000000000000000000000000008000000080bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000006000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000006000040000ff00000300000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222"
+    },
+    {
+      "name": "e02-split-member",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x1111111111111111111111111111111111111111",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "dexA",
+                    "srcAmount": "600000000",
+                    "destAmount": "300000000000000000",
+                    "percent": 60
+                  },
+                  {
+                    "exchange": "dexB",
+                    "srcAmount": "400000000",
+                    "destAmount": "200000000000000000",
+                    "percent": 40
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xbeefdead000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xdddddddddddddddddddddddddddddddddddddddd"
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003c400000000000000000000000000000364000000000000000000000000000027100000000000000000000000000000000000000000000002c402680128000a000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002640000000000000000000000000000018400000000000000b000000000000017700000000000000000000000000000000000000000000001640000000000ff000000000000000000000000000000000000000000000000000000000000000000a0000000a0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040000ff00000300000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222000000000000000000000000000000a0000000000000006c0000000000000fa0dddddddddddddddddddddddddddddddddddddddd0000008000040000ff00000300000000000000000000000000000000000000000000000000000000beefdead000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222cccccccccccccccccccccccccccccccccccccccc0000006000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222"
+    },
+    {
+      "name": "e02-ethdest-raw-fallback-with-recipient",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "dexA",
+                    "srcAmount": "600000000",
+                    "destAmount": "300000000000000000",
+                    "percent": 60
+                  },
+                  {
+                    "exchange": "dexB",
+                    "srcAmount": "400000000",
+                    "destAmount": "200000000000000000",
+                    "percent": 40
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xbeefdead000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xdddddddddddddddddddddddddddddddddddddddd"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004c40000000000000000000000000000046400000000000000000000000000002710cccccccccccccccccccccccccccccccccccccccc0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000001111111111111111111111111111111111111111000000000000000000000000222222222222222222222222222222222222222200000000000000000000000000000000000000000000030402a80128000a000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002a4000000000000000000000000000001c400000000000000b000000000000017700000000000000000000000000000000000000000000001a40000000000ff000000000000000000000000000000000000000000000000000000000000000000a0000000e0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040000ff00000300000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000002000040000ff00000900000000000000000000000000000000000000000000000000000000d0e30db0000000000000000000000000000000a0000000000000006c0000000000000fa0dddddddddddddddddddddddddddddddddddddddd0000008000040000ff00000300000000000000000000000000000000000000000000000000000000beefdead000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b200006a000f20005980200259b80c51020030400010680000002000000000ff0400090000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "e02-ethdest-raw-fallback-no-recipient",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "dexA",
+                    "srcAmount": "600000000",
+                    "destAmount": "300000000000000000",
+                    "percent": 60
+                  },
+                  {
+                    "exchange": "dexB",
+                    "srcAmount": "400000000",
+                    "destAmount": "200000000000000000",
+                    "percent": 40
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": false,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xbeefdead000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xdddddddddddddddddddddddddddddddddddddddd"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004c40000000000000000000000000000046400000000000000000000000000002710cccccccccccccccccccccccccccccccccccccccc0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000001111111111111111111111111111111111111111000000000000000000000000222222222222222222222222222222222222222200000000000000000000000000000000000000000000030402a80128000a000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000002a4000000000000000000000000000001c400000000000000b000000000000017700000000000000000000000000000000000000000000001a40000000000ff000000000000000000000000000000000000000000000000000000000000000000a0000000e0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040000ff00000700000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000002000040000ff00000900000000000000000000000000000000000000000000000000000000d0e30db0000000000000000000000000000000a0000000000000006c0000000000000fa0dddddddddddddddddddddddddddddddddddddddd0000008000040000ff00000300000000000000000000000000000000000000000000000000000000beefdead000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b200006a000f20005980200259b80c51020030400010680000002000000000ff0400090000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "e02-ethdest-raw-primary-weth-fallback",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "dexA",
+                    "srcAmount": "600000000",
+                    "destAmount": "300000000000000000",
+                    "percent": 60
+                  },
+                  {
+                    "exchange": "dexB",
+                    "srcAmount": "400000000",
+                    "destAmount": "200000000000000000",
+                    "percent": 40
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xbeefdead000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xdddddddddddddddddddddddddddddddddddddddd"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000524000000000000000000000000000004c400000000000000000000000000002710cccccccccccccccccccccccccccccccccccccccc0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222000000000000000000000000000000000000000000000364030801c8000a000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003040000000000000000000000000000022400000000000000b000000000000017700000000000000000000000000000000000000000000002040000000000ff000000000000000000000000000000000000000000000000000000000000000000a000000140bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040000ff00000300000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040000ff00000300000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d0000000000000000000000000000000000000000000000000429d069189e00006a000f20005980200259b80c51020030400010680000002000000000ff0400090000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000006c0000000000000fa0dddddddddddddddddddddddddddddddddddddddd0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000beefdead000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b200006a000f20005980200259b80c51020030400010680000002000000000ff0400090000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "e02-guard-mid-route-mixed-wrapness",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0x1111111111111111111111111111111111111111",
+        "destToken": "0x2222222222222222222222222222222222222222",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0x1111111111111111111111111111111111111111",
+                "destToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "withdraw": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0x2e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000",
+          "value": "0"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001e00000000000000000000000000000018000000000000000000000000000002710bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000001111111111111111111111111111111111111111000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d00000000000000000000000000000000000000000000000006f05b59d3b20000cccccccccccccccccccccccccccccccccccccccc0000006000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+    },
+    {
+      "name": "e02-input-extwrap-raw-fallback",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "destToken": "0x1111111111111111111111111111111111111111",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": false,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "deposit": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0xd0e30db0",
+          "value": "1000000000"
+        }
+      },
+      "bytecode": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000304000000000000000000000000000002a400000000000000000000000000002710c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000002000040000ff00000900000000000000000000000000000000000000000000000000000000d0e30db00000000000000000000000000000000000000000000001c40000008800ff000b00000000000000000000000000000000000000000000000000000000000000a000000100bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000002222222222222222222222222222222222222222c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000004000040000ff000007000000000000000000000000000000000000000000000000000000002e1a7d4d000000000000000000000000000000000000000000000000000000003b9aca00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000000044ff00000500000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000002222222222222222222222222222222222222222cccccccccccccccccccccccccccccccccccccccc0000006000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222"
+    },
+    {
+      "name": "e02-input-extwrap-weth-fallback-approve",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "destToken": "0x1111111111111111111111111111111111111111",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": true,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approveData": {
+              "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+              "target": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          }
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "deposit": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0xd0e30db0",
+          "value": "1000000000"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003a40000000000000000000000000000034400000000000000000000000000002710c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000002000040000ff00000900000000000000000000000000000000000000000000000000000000d0e30db00000000000000000000000000000000000000000000002640000008800ff000b00000000000000000000000000000000000000000000000000000000000000a0000001a0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000002222222222222222222222222222222222222222c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000006000000044ff00000000000000000000000000000000000000000000000000000000000000095ea7b3000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000006000000044ff00000000000000000000000000000000000000000000000000000000000000095ea7b3000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000002222222222222222222222222222222222222222cccccccccccccccccccccccccccccccccccccccc0000006000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222"
+    },
+    {
+      "name": "e02-input-rawprimary-weth-fallback",
+      "executor": "Executor02",
+      "priceRoute": {
+        "network": 1,
+        "side": "SELL",
+        "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "destToken": "0x1111111111111111111111111111111111111111",
+        "srcAmount": "1000000000",
+        "destAmount": "500000000000000000",
+        "bestRoute": [
+          {
+            "percent": 100,
+            "swaps": [
+              {
+                "srcToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "destToken": "0x2222222222222222222222222222222222222222",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              },
+              {
+                "srcToken": "0x2222222222222222222222222222222222222222",
+                "destToken": "0x1111111111111111111111111111111111111111",
+                "srcAmount": "1000000000",
+                "destAmount": "500000000000000000",
+                "swapExchanges": [
+                  {
+                    "exchange": "Dexalot",
+                    "srcAmount": "1000000000",
+                    "destAmount": "500000000000000000",
+                    "percent": 100
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contractMethod": "swapExactAmountIn"
+      },
+      "exchangeParams": [
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xdeadbeef000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "fallbackParam": {
+            "needWrapNative": true,
+            "dexFuncHasRecipient": true,
+            "exchangeData": "0xfeedc0de000000000000000000000000000000000000000000000000000000003b9aca00",
+            "insertFromAmountPos": 4,
+            "targetExchange": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approveData": {
+              "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+              "target": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          }
+        },
+        {
+          "needWrapNative": false,
+          "dexFuncHasRecipient": true,
+          "exchangeData": "0xcafebabe000000000000000000000000000000000000000000000000000000003b9aca00",
+          "insertFromAmountPos": 4,
+          "targetExchange": "0xcccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "maybeWethCallData": {
+        "deposit": {
+          "callee": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "calldata": "0xd0e30db0",
+          "value": "1000000000"
+        }
+      },
+      "bytecode": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003a400000000000000000000000000000344000000000000000000000000000027100000000000000000000000000000000000000000000002a40000008800ff000b00000000000000000000000000000000000000000000000000000000000000a0000001e0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000008000000044ff00000500000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000002222222222222222222222222222222222222222c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000006000000044ff00000000000000000000000000000000000000000000000000000000000000095ea7b3000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000002000040000ff00000900000000000000000000000000000000000000000000000000000000d0e30db0c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000006000000044ff00000000000000000000000000000000000000000000000000000000000000095ea7b3000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000008000040044ff00000b00000000000000000000000000000000000000000000000000000000feedc0de000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000002222222222222222222222222222222222222222cccccccccccccccccccccccccccccccccccccccc0000006000040000ff00000300000000000000000000000000000000000000000000000000000000cafebabe000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000002222222222222222222222222222222222222222"
+    }
+  ]
+}

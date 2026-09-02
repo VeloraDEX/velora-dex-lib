@@ -121,6 +121,23 @@ func getRouteExecutionType(priceRoute PriceRoute) (routeExecutionType, error) {
 	return "", fmt.Errorf("Route type is not supported yet")
 }
 
+// RouteHasFallback reports whether any swap exchange in the route carries a
+// revertable fallback. Fallback groups are only encoded on Executor01/02;
+// callers routing to Executor03/WETH should warn (never fail) — the fallback
+// is simply ignored there.
+func RouteHasFallback(priceRoute PriceRoute) bool {
+	for _, route := range priceRoute.BestRoute {
+		for _, swap := range route.Swaps {
+			for _, swapExchange := range swap.SwapExchanges {
+				if swapExchange.Fallback != nil {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func isSingleWrapRoute(priceRoute PriceRoute) bool {
 	if _, ok := supportedWethNetworks[priceRoute.Network]; !ok {
 		return false

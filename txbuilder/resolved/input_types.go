@@ -66,6 +66,18 @@ type DexExchangeBuildParam struct {
 	AmountsPacked128                      *bool        `json:"amountsPacked128,omitempty"`
 	Permit2Approval                       *bool        `json:"permit2Approval,omitempty"`
 	ApproveData                           *ApproveData `json:"approveData,omitempty"`
+
+	// ExecutorIsDestReceiver marks a param whose output is delivered on the
+	// executor by construction. Set only on revertable-group FALLBACK params
+	// (never returned by a dex's GetDexParam): it forces the dest-balance
+	// check so the group threads the fallback's real output forward.
+	ExecutorIsDestReceiver bool `json:"executorIsDestReceiver,omitempty"`
+
+	// FallbackParam is the alternative execution for this leg. When set, the
+	// executor wraps primary+fallback into a revertable group: the primary
+	// runs in a self-call and, if it reverts, the fallback runs from the
+	// original input.
+	FallbackParam *DexExchangeBuildParam `json:"fallbackParam,omitempty"`
 }
 
 type ApproveData struct {

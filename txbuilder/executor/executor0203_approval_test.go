@@ -205,6 +205,7 @@ func TestExecutor0203WETHDepositApprovalCalldata(t *testing.T) {
 					wethPlan,
 					false,
 					false,
+					nil,
 				)
 			},
 		},

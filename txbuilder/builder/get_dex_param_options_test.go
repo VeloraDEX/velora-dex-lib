@@ -56,6 +56,7 @@ func TestBuildResolvedLegs_ForwardsGetDexParamOptions(t *testing.T) {
 			WrappedNativeTokenAddress: testApprovalWETH,
 		},
 		routePlan,
+		resolved.Executor01,
 		testApprovalTargetExchange,
 	)
 	if err != nil {
@@ -154,6 +155,7 @@ func TestBuildResolvedLegs_PreProcessIsPerLeg(t *testing.T) {
 			WrappedNativeTokenAddress: testApprovalWETH,
 		},
 		routePlan,
+		resolved.Executor01,
 		testApprovalTargetExchange,
 	)
 	if err != nil {

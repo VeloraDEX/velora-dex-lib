@@ -70,4 +70,12 @@ const (
 	specialDexBuyOnSolidlyV3                     specialDex = 11
 	specialDexSwapOnDexalot                      specialDex = 12
 	specialDexSwapOnHashflow                     specialDex = 13
+
+	// specialDexRevertableFallbackGroup marks a builder-internal group step:
+	// the payload after the standard padding is
+	// [tryLen(4)][fallbackLen(4)][try block][fallback block]. The executor
+	// runs the try block in a self-call and, on revert, runs the fallback
+	// block from the original pre-group input. Never valid as a dex param's
+	// specialDexFlag override — only the builders emit it.
+	specialDexRevertableFallbackGroup specialDex = 255
 )

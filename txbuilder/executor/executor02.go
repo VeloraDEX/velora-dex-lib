@@ -22,6 +22,54 @@ type executor02Flags struct {
 	wrap     flag
 }
 
+// groupBranchEndState records the ETH-dest ending steps a per-exchange unit
+// appended (see wrapInRevertableGroup: a group's fallback block must end in
+// the same state as its try block).
+type groupBranchEndState struct {
+	unwrapped  bool
+	sentNative bool
+}
+
+// ethDestOutcome is where an ETH-dest branch's output ends up: held as WETH
+// on the executor, held as raw ETH on the executor, or already delivered to
+// Augustus.
+type ethDestOutcome string
+
+const (
+	ethDestOutcomeWeth ethDestOutcome = "weth"
+	ethDestOutcomeEth  ethDestOutcome = "eth"
+	ethDestOutcomeSent ethDestOutcome = "sent"
+)
+
+// branchEthDestOutcome reports where an ETH-dest final-hop branch leaves its
+// output. Everything outside a revertable group (root unwrap/send, threading
+// flags, sibling accounting) is computed from the primary's params, so the
+// fallback block must end in the same place the try block would.
+//
+// deliversViaRecipient: primary raw-ETH last-hop params are built with
+// recipient = Augustus, so a recipient-capable dex delivers itself. Fallback
+// params are always built with recipient = executor — their output stays on
+// the executor no matter what the dex supports.
+func branchEthDestOutcome(
+	param resolved.DexExchangeBuildParam,
+	endState groupBranchEndState,
+	deliversViaRecipient bool,
+) ethDestOutcome {
+	if endState.sentNative {
+		return ethDestOutcomeSent
+	}
+	if param.NeedWrapNative.Value {
+		if endState.unwrapped {
+			return ethDestOutcomeEth
+		}
+		return ethDestOutcomeWeth
+	}
+	if deliversViaRecipient && param.DexFuncHasRecipient {
+		return ethDestOutcomeSent
+	}
+	return ethDestOutcomeEth
+}
+
 func (b Executor02Builder) BuildBytecode(input resolved.ExecutorBytecodeBuildInput) (resolved.HexBytes, error) {
 	priceRoute := buildExecutorRoute(input)
 	exchangeParams, err := getExchangeParams(input)
@@ -598,6 +646,333 @@ func (b Executor02Builder) buildDexCallData(
 	)
 }
 
+// wrapInRevertableGroup wraps an already-assembled per-exchange unit in a
+// revertable fallback group (specialDex 0xFF). The step's calldata payload is
+// [28-byte padding][tryLen(4)][fallbackLen(4)][try block][fallback block];
+// the try block is the unit as it would have run inline, the fallback block
+// is the alternative's unit. On-chain, Executor02 runs the try block in a
+// self-call and, on revert, runs the fallback block from the same input.
+//
+// Threading: when the group sits directly in a horizontal sequence
+// (insidePath = false) it must thread the running amount to the next step, so
+// it uses the vertical-branching wrapper's flag/destTokenPos semantics. When
+// it is a member of a split (insidePath = true), the vertical-branching
+// wrapper above it does the threading, so the group skips the balance check.
+func (b Executor02Builder) wrapInRevertableGroup(
+	priceRoute executorRoute,
+	routeIndex int,
+	swapIndex int,
+	swapExchangeIndex int,
+	exchangeParams []resolved.DexExchangeBuildParam,
+	exchangeParamIndex int,
+	tryBlock resolved.HexBytes,
+	allowToAddWrap bool,
+	prevBranchWasWrapped bool,
+	insidePath bool,
+	wrapAddedInsideTry bool,
+	tryEndState groupBranchEndState,
+	maybeWethCallData *resolved.WethPlan,
+	applyVerticalBranching bool,
+) (resolved.HexBytes, error) {
+	swap := priceRoute.BestRoute[routeIndex].Swaps[swapIndex]
+	swapExchange := swap.SwapExchanges[swapExchangeIndex]
+	fallbackParam := exchangeParams[exchangeParamIndex].FallbackParam
+	if fallbackParam == nil {
+		return tryBlock, nil
+	}
+
+	// fallback block: substitute the fallback param at this hop and recompute
+	// flags for it. Fresh wrap maps: the fallback is an independent
+	// alternative whose own wrap/approve must be encoded inside its block.
+	fallbackExchangeParams := make([]resolved.DexExchangeBuildParam, len(exchangeParams))
+	copy(fallbackExchangeParams, exchangeParams)
+	fallbackExchangeParams[exchangeParamIndex] = *fallbackParam
+	fallbackFlags, err := b.buildFlags(priceRoute, fallbackExchangeParams, maybeWethCallData)
+	if err != nil {
+		return "", err
+	}
+	fallbackEndState := groupBranchEndState{}
+	fallbackWrapMap := make(map[string]bool)
+	fallbackBlock, err := b.buildSingleSwapExchangeCallData(
+		priceRoute,
+		routeIndex,
+		swapIndex,
+		swapExchangeIndex,
+		fallbackExchangeParams,
+		fallbackFlags,
+		fallbackWrapMap,
+		allowToAddWrap,
+		prevBranchWasWrapped,
+		make(map[int]bool),
+		maybeWethCallData,
+		false, // the path metadata wraps the group, not the block
+		applyVerticalBranching,
+		&fallbackEndState,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	// Normalize the fallback block's INPUT. When the primary's wrap lives
+	// outside the try block (root/shared wrap), it persists after a try
+	// revert, so the branch holds its slice as WETH — unlike a try-internal
+	// wrap, which rolls back leaving raw ETH (that case the fallback unit
+	// already handles by adding its own approve+deposit).
+	if isETHAddress(swap.SrcToken) &&
+		exchangeParams[exchangeParamIndex].NeedWrapNative.Value &&
+		!wrapAddedInsideTry {
+		if !fallbackParam.NeedWrapNative.Value {
+			// WETH in hand, fallback consumes raw ETH: unwrap the slice first
+			// (the running amount is inserted at runtime; rolls back with the
+			// block).
+			withdrawRawCalldata, err := buildERC20WithdrawCalldata(swapExchange.SrcAmount)
+			if err != nil {
+				return "", err
+			}
+			withdrawCallData, err := buildUnwrapEthCallData(
+				getWETHAddress(*fallbackParam, b.context),
+				withdrawRawCalldata,
+			)
+			if err != nil {
+				return "", err
+			}
+			fallbackBlock, err = concatHex(string(withdrawCallData), string(fallbackBlock))
+			if err != nil {
+				return "", err
+			}
+		} else if fallbackParam.ApproveData != nil && !boolValue(fallbackParam.SkipApproval) {
+			// WETH in hand, fallback also consumes WETH: no deposit needed,
+			// but the unit skipped its approve (it only rides with the deposit
+			// branch, which the external wrap suppresses) — prepend it.
+			approveCallData, err := buildApproveCallData(
+				b.context,
+				fallbackParam.ApproveData.Target,
+				fallbackParam.ApproveData.Token,
+				fallbackFlags.approves[exchangeParamIndex],
+				boolValue(fallbackParam.Permit2Approval),
+				maxUint,
+			)
+			if err != nil {
+				return "", err
+			}
+			fallbackBlock, err = concatHex(string(approveCallData), string(fallbackBlock))
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	// Raw-native primary + wrap-needing fallback on a native-src hop: no wrap
+	// exists on the primary path, and the fallback unit can wrongly skip its
+	// own deposit — root-wrap detection runs on the SUBSTITUTED params
+	// (doesRouteNeedsRootWrapEth), not the real route. If the unit didn't
+	// wrap, prepend the approve+deposit.
+	if isETHAddress(swap.SrcToken) &&
+		!exchangeParams[exchangeParamIndex].NeedWrapNative.Value &&
+		fallbackParam.NeedWrapNative.Value &&
+		maybeWethCallData != nil && maybeWethCallData.Deposit != nil &&
+		!fallbackWrapMap[swapExchangeMapKey(routeIndex, swapIndex, swapExchangeIndex)] {
+		approveCallData := resolved.HexBytes("0x")
+		if fallbackParam.ApproveData != nil && !boolValue(fallbackParam.SkipApproval) {
+			approveCallData, err = buildApproveCallData(
+				b.context,
+				fallbackParam.ApproveData.Target,
+				fallbackParam.ApproveData.Token,
+				fallbackFlags.approves[exchangeParamIndex],
+				boolValue(fallbackParam.Permit2Approval),
+				maxUint,
+			)
+			if err != nil {
+				return "", err
+			}
+		}
+		depositRawCalldata, err := buildERC20DepositCalldata()
+		if err != nil {
+			return "", err
+		}
+		depositCallData, err := buildWrapEthCallData(
+			getWETHAddress(*fallbackParam, b.context),
+			depositRawCalldata,
+			sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
+			0,
+		)
+		if err != nil {
+			return "", err
+		}
+		fallbackBlock, err = concatHex(string(approveCallData), string(depositCallData), string(fallbackBlock))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// Normalize the fallback block's OUTPUT on an ETH-dest final hop: the
+	// post-group machinery was shaped by the primary, so the fallback must end
+	// where the try block would — wrap raw ETH when the try ends in WETH,
+	// unwrap a WETH-holding fallback (and send if the try would have)
+	// otherwise; already-delivered ('sent') is terminal.
+	isLastSwap := swapIndex == len(priceRoute.BestRoute[routeIndex].Swaps)-1
+	if isETHAddress(swap.DestToken) && isLastSwap {
+		tryOutcome := branchEthDestOutcome(exchangeParams[exchangeParamIndex], tryEndState, true)
+		fallbackOutcome := branchEthDestOutcome(*fallbackParam, fallbackEndState, false)
+
+		if fallbackOutcome != tryOutcome && fallbackOutcome != ethDestOutcomeSent {
+			if tryOutcome == ethDestOutcomeWeth {
+				depositRawCalldata, err := buildERC20DepositCalldata()
+				if err != nil {
+					return "", err
+				}
+				depositCallData, err := buildWrapEthCallData(
+					getWETHAddress(*fallbackParam, b.context),
+					depositRawCalldata,
+					sendEthEqualToFromAmountDontCheckBalanceAfterSwap,
+					0,
+				)
+				if err != nil {
+					return "", err
+				}
+				fallbackBlock, err = concatHex(string(fallbackBlock), string(depositCallData))
+				if err != nil {
+					return "", err
+				}
+			} else {
+				if fallbackOutcome == ethDestOutcomeWeth {
+					withdrawRawCalldata, err := buildERC20WithdrawCalldata(swapExchange.DestAmount)
+					if err != nil {
+						return "", err
+					}
+					withdrawCallData, err := buildUnwrapEthCallData(
+						getWETHAddress(*fallbackParam, b.context),
+						withdrawRawCalldata,
+					)
+					if err != nil {
+						return "", err
+					}
+					fallbackBlock, err = concatHex(string(fallbackBlock), string(withdrawCallData))
+					if err != nil {
+						return "", err
+					}
+				}
+				if tryOutcome == ethDestOutcomeSent {
+					finalSpecialFlagCalldata, err := buildFinalSpecialFlagCalldata(b.context)
+					if err != nil {
+						return "", err
+					}
+					fallbackBlock, err = concatHex(string(fallbackBlock), string(finalSpecialFlagCalldata))
+					if err != nil {
+						return "", err
+					}
+				}
+			}
+		}
+	}
+
+	// payload = [padding(28)][tryLen(4)][fallbackLen(4)][try][fallback]
+	tryLength, err := hexDataLength(string(tryBlock))
+	if err != nil {
+		return "", err
+	}
+	fallbackLength, err := hexDataLength(string(fallbackBlock))
+	if err != nil {
+		return "", err
+	}
+	tryLengthField, err := leftPadUint(tryLength, 4)
+	if err != nil {
+		return "", err
+	}
+	fallbackLengthField, err := leftPadUint(fallbackLength, 4)
+	if err != nil {
+		return "", err
+	}
+	payload, err := concatHex(
+		zeroBytes(bytes28Length),
+		tryLengthField,
+		fallbackLengthField,
+		string(tryBlock),
+		string(fallbackBlock),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	groupFlag := dontInsertFromAmountDontCheckBalanceAfterSwap
+	if !insidePath {
+		groupFlag = b.buildVerticalBranchingFlag(priceRoute, swap, exchangeParams, routeIndex, swapIndex)
+	}
+
+	// Locate the dest token in the payload for the post-group balance check
+	// (append it if absent — trailing bytes after the blocks are ignored
+	// on-chain).
+	destTokenPos := 0
+	if int(groupFlag)%3 == 2 {
+		destTokenAddr := resolved.Address(lowerHex(string(swap.DestToken)))
+		if isETHAddress(swap.DestToken) {
+			destTokenAddr = resolved.Address(lowerHex(string(b.context.WrappedNativeTokenAddress)))
+		}
+		payload, err = addTokenAddressToCallData(payload, destTokenAddr)
+		if err != nil {
+			return "", err
+		}
+		destTokenAddrIndex := strings.Index(strip0x(string(payload)), strip0x(string(destTokenAddr)))
+		destTokenPos = destTokenAddrIndex/2 - 40
+		if destTokenPos < 0 {
+			destTokenPos = 0
+		}
+	}
+
+	return b.packRevertableGroupCallData(payload, destTokenPos, groupFlag)
+}
+
+// packRevertableGroupCallData packs the group step header around a payload
+// that already carries the 28-byte padding: [target=zeros(20)][len(4)]
+// [fromAmountPos(2)][destTokenPos(2)][returnAmountPos(1)][0xFF(1)][flag(2)]
+// [payload].
+func (b Executor02Builder) packRevertableGroupCallData(
+	payload resolved.HexBytes,
+	destTokenPos int,
+	dexFlag flag,
+) (resolved.HexBytes, error) {
+	payloadLength, err := hexDataLength(string(payload))
+	if err != nil {
+		return "", err
+	}
+	lengthField, err := leftPadUint(payloadLength, 4)
+	if err != nil {
+		return "", err
+	}
+	fromAmountField, err := leftPadUint(0, 2)
+	if err != nil {
+		return "", err
+	}
+	destTokenField, err := leftPadUint(destTokenPos, 2)
+	if err != nil {
+		return "", err
+	}
+	// The contract forces the group's returnAmountPos to 0xFF; the field is
+	// packed as zero.
+	returnAmountField, err := leftPadUint(0, 1)
+	if err != nil {
+		return "", err
+	}
+	specialField, err := leftPadUint(int(specialDexRevertableFallbackGroup), 1)
+	if err != nil {
+		return "", err
+	}
+	flagField, err := leftPadUint(int(dexFlag), 2)
+	if err != nil {
+		return "", err
+	}
+	return concatHex(
+		zeroBytes(20),
+		lengthField,
+		fromAmountField,
+		destTokenField,
+		returnAmountField,
+		specialField,
+		flagField,
+		string(payload),
+	)
+}
+
 func (b Executor02Builder) buildSingleSwapExchangeCallData(
 	priceRoute executorRoute,
 	routeIndex int,
@@ -612,11 +987,16 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 	maybeWethCallData *resolved.WethPlan,
 	shouldAddMultiSwapMetadata bool,
 	applyVerticalBranching bool,
+	endStateOut *groupBranchEndState,
 ) (resolved.HexBytes, error) {
 	isSimpleSwap := len(priceRoute.BestRoute) == 1 && len(priceRoute.BestRoute[0].Swaps) == 1
 	swap := priceRoute.BestRoute[routeIndex].Swaps[swapIndex]
 	swapExchange := swap.SwapExchanges[swapExchangeIndex]
 	exchangeParamIndex := exchangeParamIndexForPosition(priceRoute, routeIndex, swapIndex, swapExchangeIndex)
+	// What this unit appends for ETH-dest endings — a revertable group's
+	// fallback block must end in the same state as its try block, so both
+	// sides report what they did (see wrapInRevertableGroup).
+	endState := groupBranchEndState{}
 	if exchangeParamIndex < 0 || exchangeParamIndex >= len(exchangeParams) {
 		return "", fmt.Errorf("missing exchange param for route position %d:%d:%d", routeIndex, swapIndex, swapExchangeIndex)
 	}
@@ -813,6 +1193,7 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 			)
 		if curExchangeParam.WethAddress != nil || needUnwrap {
 			unwrapToSwapMap[swapIndex] = true
+			endState.unwrapped = true
 			withdrawCallData, err = buildUnwrapEthCallData(
 				getWETHAddress(curExchangeParam, b.context),
 				maybeWethCallData.Withdraw.Calldata,
@@ -826,6 +1207,7 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 			return "", err
 		}
 		if isSimpleSwap && (curExchangeParam.WethAddress != nil || needUnwrap) {
+			endState.sentNative = true
 			finalSpecialFlagCalldata, err := buildFinalSpecialFlagCalldata(b.context)
 			if err != nil {
 				return "", err
@@ -893,11 +1275,50 @@ func (b Executor02Builder) buildSingleSwapExchangeCallData(
 		isETHAddress(swap.DestToken) &&
 		isLastSwap &&
 		!b.doesRouteNeedsRootUnwrapEth(priceRoute, exchangeParams) {
+		endState.sentNative = true
 		finalSpecialFlagCalldata, err := buildFinalSpecialFlagCalldata(b.context)
 		if err != nil {
 			return "", err
 		}
 		swapExchangeCallData, err = concatHex(string(swapExchangeCallData), string(finalSpecialFlagCalldata))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if endStateOut != nil {
+		*endStateOut = endState
+	}
+
+	// In a fallback-block build the substituted param carries no fallback of
+	// its own, so the recursion from wrapInRevertableGroup closes here.
+	if fallbackParam := curExchangeParam.FallbackParam; fallbackParam != nil &&
+		// Mixed wrap-ness on a MID-ROUTE ETH-dest hop is not normalized (raw
+		// ETH as an intermediate threading token is flag-7 territory the
+		// group's balance check doesn't model) — run plain. Final-hop
+		// mismatches are normalized inside wrapInRevertableGroup (input and
+		// output side).
+		!(isETHAddress(swap.DestToken) &&
+			!isLastSwap &&
+			curExchangeParam.NeedWrapNative.Value != fallbackParam.NeedWrapNative.Value) {
+		swapExchangeCallData, err = b.wrapInRevertableGroup(
+			priceRoute,
+			routeIndex,
+			swapIndex,
+			swapExchangeIndex,
+			exchangeParams,
+			exchangeParamIndex,
+			swapExchangeCallData,
+			allowToAddWrap,
+			prevBranchWasWrapped,
+			shouldAddMultiSwapMetadata,
+			// Whether the primary's wrap sits INSIDE the try block (rolls back
+			// with it) or outside (root/shared — persists after a try revert).
+			addedWrapToSwapExchangeMap[swapExchangeMapKey(routeIndex, swapIndex, swapExchangeIndex)],
+			endState,
+			maybeWethCallData,
+			applyVerticalBranching,
+		)
 		if err != nil {
 			return "", err
 		}
@@ -1003,6 +1424,7 @@ func (b Executor02Builder) buildSingleSwapCallData(
 			maybeWethCallData,
 			len(swap.SwapExchanges) > 1,
 			applyVerticalBranching,
+			nil,
 		)
 		if err != nil {
 			return "", err

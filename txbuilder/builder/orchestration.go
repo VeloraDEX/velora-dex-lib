@@ -25,6 +25,16 @@ type resolvedLegWithWeth struct {
 	wethWithdraw *big.Int
 }
 
+// groupFallbackContext is present iff a dex param is being built for a
+// revertable group's fallback branch — see buildSingleExchangeParam.
+type groupFallbackContext struct {
+	// Executor01 encodes a single route-level executor->Augustus forward
+	// shaped by the primary, so a fallback behind a false-recipient primary
+	// must also keep its output on the executor (Executor02 forwards
+	// per-branch and needs nothing).
+	executorIsDestReceiverOnGroupPrimary bool
+}
+
 func resolveQuotedAmount(priceRoute PriceRoute, quotedAmount *resolved.DecimalString) resolved.DecimalString {
 	if quotedAmount != nil && *quotedAmount != "" {
 		return *quotedAmount
@@ -95,6 +105,7 @@ func buildGenericDexCallParams(
 	executionContractAddress resolved.Address,
 	wrappedNativeTokenAddress resolved.Address,
 	augustusV6Address resolved.Address,
+	groupFallback *groupFallbackContext,
 ) (genericDexCallParams, error) {
 	isMegaSwap := len(priceRoute.BestRoute) > 1
 	isMultiSwap := !isMegaSwap && len(priceRoute.BestRoute) > 0 && len(priceRoute.BestRoute[0].Swaps) > 1
@@ -148,7 +159,12 @@ func buildGenericDexCallParams(
 	needToWithdrawAfterSwap := normalizeAddress(destToken) == normalizeAddress(wrappedNativeTokenAddress) &&
 		wethWithdraw.Sign() > 0
 	recipient := augustusV6Address
-	if needToWithdrawAfterSwap || !isLastSwap || priceRoute.Side == resolved.SideBuy {
+	if needToWithdrawAfterSwap || !isLastSwap || priceRoute.Side == resolved.SideBuy ||
+		// A group fallback must end where the shared post-group bytecode
+		// expects the funds: on the executor for ETH-dest hops, and on every
+		// hop when the primary keeps its output there.
+		(groupFallback != nil &&
+			(isNativeAddress(swap.DestToken) || groupFallback.executorIsDestReceiverOnGroupPrimary)) {
 		recipient = executionContractAddress
 	}
 

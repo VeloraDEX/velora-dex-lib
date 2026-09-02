@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/VeloraDEX/velora-dex-lib/txbuilder/resolved"
 )
@@ -80,7 +81,7 @@ func buildGenericInput(ctx context.Context, req BuildRequest, deps Deps) (resolv
 		return resolved.BuildInput{}, err
 	}
 
-	legsWithWeth, err := buildResolvedLegs(ctx, req, deps, encodingContext, routePlan, executorAddress)
+	legsWithWeth, err := buildResolvedLegs(ctx, req, deps, encodingContext, routePlan, executorType, executorAddress)
 	if err != nil {
 		return resolved.BuildInput{}, err
 	}
@@ -214,6 +215,7 @@ func buildResolvedLegs(
 	deps Deps,
 	encodingContext resolved.EncodingContext,
 	routePlan resolved.RoutePlan,
+	executorType resolved.ExecutorType,
 	executorAddress resolved.Address,
 ) ([]resolvedLegWithWeth, error) {
 	routePositions := resolved.WalkRoutePlan(routePlan)
@@ -227,80 +229,57 @@ func buildResolvedLegs(
 		swapExchange := swap.SwapExchanges[swapExchangeIndex]
 		key := resolved.RoutePlanExchangeKey(routePosition)
 
-		needWrapNativeInput, err := buildNeedWrapNativeInput(
-			req.PriceRoute,
+		primary, err := buildSingleExchangeParam(
+			ctx,
+			req,
+			deps,
+			encodingContext,
 			routeIndex,
-			swap,
 			swapIndex,
-			swapExchange,
 			swapExchangeIndex,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		dexEncoder, err := deps.DexRegistry.GetDexEncoder(ctx, req.PriceRoute.Network, swapExchange.Exchange)
-		if err != nil {
-			return nil, err
-		}
-		if dexEncoder == nil {
-			return nil, fmt.Errorf("dex encoder is required for %s", swapExchange.Exchange)
-		}
-
-		dexNeedWrapNative, err := dexEncoder.NeedWrapNative(ctx, needWrapNativeInput)
-		if err != nil {
-			return nil, err
-		}
-		callParams, err := buildGenericDexCallParams(
-			req.PriceRoute,
-			routeIndex,
 			swap,
-			swapIndex,
 			swapExchange,
-			req.MinMaxAmount,
-			dexNeedWrapNative,
 			executorAddress,
-			encodingContext.WrappedNativeTokenAddress,
-			encodingContext.AugustusV6Address,
+			key,
+			nil,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		srcAmountForDex := callParams.srcAmount
-		if req.PriceRoute.Side == resolved.SideBuy {
-			srcAmountForDex = swapExchange.SrcAmount
-		}
+		exchangeParam := primary.param
+		wethDeposit := primary.callParams.wethDeposit
+		wethWithdraw := primary.callParams.wethWithdraw
 
-		preProcess, err := buildGetDexParamPreProcess(req, swap, swapExchange, callParams, executorAddress)
-		if err != nil {
-			return nil, err
-		}
-
-		dexParamInput := DexParamInput{
-			NeedWrapNativeInput: needWrapNativeInput,
-			DexKey:              swapExchange.Exchange,
-			SrcToken:            callParams.srcToken,
-			DestToken:           callParams.destToken,
-			SrcAmount:           srcAmountForDex,
-			DestAmount:          callParams.destAmount,
-			Recipient:           callParams.recipient,
-			ExecutorAddress:     executorAddress,
-			Side:                req.PriceRoute.Side,
-			Data:                swapExchange.Data,
-			Options:             withPreProcess(req.GetDexParamOptions, preProcess),
-		}
-		dexParam, err := dexEncoder.GetDexParam(ctx, dexParamInput)
-		if err != nil {
-			return nil, err
-		}
-		if dexParam.NeedWrapNative != dexNeedWrapNative {
-			return nil, fmt.Errorf(
-				"needWrapNative mismatch for route position %s: expected %t, got %t",
-				key,
-				dexNeedWrapNative,
-				dexParam.NeedWrapNative,
+		// Revertable-fallback alternative attached at pricing, built through
+		// the exact same path as the primary. Its wrap/unwrap counts toward
+		// the shared WETH plan: the deposit/withdraw template must exist for
+		// whichever branch runs.
+		if swapExchange.Fallback != nil {
+			fallback, err := buildSingleExchangeParam(
+				ctx,
+				req,
+				deps,
+				encodingContext,
+				routeIndex,
+				swapIndex,
+				swapExchangeIndex,
+				swap,
+				*swapExchange.Fallback,
+				executorAddress,
+				key+".fallback",
+				&groupFallbackContext{
+					executorIsDestReceiverOnGroupPrimary: executorType == resolved.Executor01 &&
+						!exchangeParam.DexFuncHasRecipient,
+				},
 			)
+			if err != nil {
+				return nil, err
+			}
+			fallbackParam := fallback.param
+			exchangeParam.FallbackParam = &fallbackParam
+			wethDeposit = new(big.Int).Add(wethDeposit, fallback.callParams.wethDeposit)
+			wethWithdraw = new(big.Int).Add(wethWithdraw, fallback.callParams.wethWithdraw)
 		}
 
 		legs = append(legs, resolvedLegWithWeth{
@@ -308,19 +287,130 @@ func buildResolvedLegs(
 				RouteIndex:           routeIndex,
 				SwapIndex:            swapIndex,
 				SwapExchangeIndex:    swapExchangeIndex,
-				ExchangeParam:        convertDexExchangeParam(dexParam),
-				NormalizedSrcToken:   callParams.srcToken,
-				NormalizedDestToken:  callParams.destToken,
-				NormalizedSrcAmount:  callParams.srcAmount,
-				NormalizedDestAmount: callParams.destAmount,
-				Recipient:            callParams.recipient,
+				ExchangeParam:        exchangeParam,
+				NormalizedSrcToken:   primary.callParams.srcToken,
+				NormalizedDestToken:  primary.callParams.destToken,
+				NormalizedSrcAmount:  primary.callParams.srcAmount,
+				NormalizedDestAmount: primary.callParams.destAmount,
+				Recipient:            primary.callParams.recipient,
 			},
-			wethDeposit:  callParams.wethDeposit,
-			wethWithdraw: callParams.wethWithdraw,
+			wethDeposit:  wethDeposit,
+			wethWithdraw: wethWithdraw,
 		})
 	}
 
 	return legs, nil
+}
+
+type builtExchangeParam struct {
+	param      resolved.DexExchangeBuildParam
+	callParams genericDexCallParams
+}
+
+// buildSingleExchangeParam resolves needWrapNative, call params, and the dex
+// param for one swap exchange. Shared by the primary swap and its revertable
+// fallback alternative so both go through the exact same path; groupFallback
+// is present iff this builds the fallback branch.
+func buildSingleExchangeParam(
+	ctx context.Context,
+	req BuildRequest,
+	deps Deps,
+	encodingContext resolved.EncodingContext,
+	routeIndex int,
+	swapIndex int,
+	swapExchangeIndex int,
+	swap PriceRouteSwap,
+	swapExchange PriceRouteSwapExchange,
+	executorAddress resolved.Address,
+	key string,
+	groupFallback *groupFallbackContext,
+) (builtExchangeParam, error) {
+	needWrapNativeInput, err := buildNeedWrapNativeInput(
+		req.PriceRoute,
+		routeIndex,
+		swap,
+		swapIndex,
+		swapExchange,
+		swapExchangeIndex,
+	)
+	if err != nil {
+		return builtExchangeParam{}, err
+	}
+
+	dexEncoder, err := deps.DexRegistry.GetDexEncoder(ctx, req.PriceRoute.Network, swapExchange.Exchange)
+	if err != nil {
+		return builtExchangeParam{}, err
+	}
+	if dexEncoder == nil {
+		return builtExchangeParam{}, fmt.Errorf("dex encoder is required for %s", swapExchange.Exchange)
+	}
+
+	dexNeedWrapNative, err := dexEncoder.NeedWrapNative(ctx, needWrapNativeInput)
+	if err != nil {
+		return builtExchangeParam{}, err
+	}
+	callParams, err := buildGenericDexCallParams(
+		req.PriceRoute,
+		routeIndex,
+		swap,
+		swapIndex,
+		swapExchange,
+		req.MinMaxAmount,
+		dexNeedWrapNative,
+		executorAddress,
+		encodingContext.WrappedNativeTokenAddress,
+		encodingContext.AugustusV6Address,
+		groupFallback,
+	)
+	if err != nil {
+		return builtExchangeParam{}, err
+	}
+
+	srcAmountForDex := callParams.srcAmount
+	if req.PriceRoute.Side == resolved.SideBuy {
+		srcAmountForDex = swapExchange.SrcAmount
+	}
+
+	preProcess, err := buildGetDexParamPreProcess(req, swap, swapExchange, callParams, executorAddress)
+	if err != nil {
+		return builtExchangeParam{}, err
+	}
+
+	dexParamInput := DexParamInput{
+		NeedWrapNativeInput: needWrapNativeInput,
+		DexKey:              swapExchange.Exchange,
+		SrcToken:            callParams.srcToken,
+		DestToken:           callParams.destToken,
+		SrcAmount:           srcAmountForDex,
+		DestAmount:          callParams.destAmount,
+		Recipient:           callParams.recipient,
+		ExecutorAddress:     executorAddress,
+		Side:                req.PriceRoute.Side,
+		Data:                swapExchange.Data,
+		Options:             withPreProcess(req.GetDexParamOptions, preProcess),
+	}
+	dexParam, err := dexEncoder.GetDexParam(ctx, dexParamInput)
+	if err != nil {
+		return builtExchangeParam{}, err
+	}
+	if dexParam.NeedWrapNative != dexNeedWrapNative {
+		return builtExchangeParam{}, fmt.Errorf(
+			"needWrapNative mismatch for route position %s: expected %t, got %t",
+			key,
+			dexNeedWrapNative,
+			dexParam.NeedWrapNative,
+		)
+	}
+
+	converted := convertDexExchangeParam(dexParam)
+	// The fallback was redirected onto the executor: the flag builders must
+	// balance-check its output so the route-level forward gets the real
+	// amount. Never set on primaries.
+	if groupFallback != nil && groupFallback.executorIsDestReceiverOnGroupPrimary {
+		converted.ExecutorIsDestReceiver = true
+	}
+
+	return builtExchangeParam{param: converted, callParams: callParams}, nil
 }
 
 func addDexExchangeApproveParams(
