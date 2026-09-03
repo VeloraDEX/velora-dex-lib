@@ -119,14 +119,27 @@ type FeeInput struct {
 }
 
 type TxObject struct {
-	From                 Address       `json:"from"`
-	To                   Address       `json:"to"`
-	Value                DecimalString `json:"value"`
-	Data                 HexBytes      `json:"data"`
-	ChainID              int           `json:"chainId"`
+	From    Address       `json:"from"`
+	To      Address       `json:"to"`
+	Value   DecimalString `json:"value"`
+	Data    HexBytes      `json:"data"`
+	ChainID int           `json:"chainId"`
+
 	GasPrice             DecimalString `json:"gasPrice,omitempty"`
 	MaxFeePerGas         DecimalString `json:"maxFeePerGas,omitempty"`
 	MaxPriorityFeePerGas DecimalString `json:"maxPriorityFeePerGas,omitempty"`
+
+	// Gas is the gas limit an estimate produced, already carrying whatever
+	// safety margin the caller applies. Empty when no estimate ran — the
+	// caller asked to skip it, or the endpoint does not estimate at all —
+	// and omitted from the wire in that case, because a gas limit of ""
+	// is not a limit a wallet can use.
+	//
+	// Declared last on purpose. Key order here is the wire contract (see
+	// TestTxObject_EmitsLegacyKeyOrder), so a field added anywhere else
+	// would shift every key after it for a client reading this response as
+	// an ordered map. Appending shifts nothing.
+	Gas DecimalString `json:"gas,omitempty"`
 }
 
 type BuildOutput struct {

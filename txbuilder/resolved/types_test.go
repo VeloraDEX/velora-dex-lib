@@ -21,6 +21,7 @@ func TestTxObject_EmitsLegacyKeyOrder(t *testing.T) {
 		GasPrice:             "30000000000",
 		MaxFeePerGas:         "50000000000",
 		MaxPriorityFeePerGas: "1000000000",
+		Gas:                  "210000",
 	}
 	b, err := json.Marshal(tx)
 	if err != nil {
@@ -37,6 +38,7 @@ func TestTxObject_EmitsLegacyKeyOrder(t *testing.T) {
 		`"gasPrice":`,
 		`"maxFeePerGas":`,
 		`"maxPriorityFeePerGas":`,
+		`"gas":`,
 	}
 	prev := -1
 	for _, key := range expectedOrder {
