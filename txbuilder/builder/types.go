@@ -114,6 +114,12 @@ type PriceRouteSwapExchange struct {
 	// this leg touch" in a post-mortem.
 	PoolIdentifiers []string `json:"poolIdentifiers,omitempty"`
 
+	// PoolAddresses is the on-chain pool each leg touched, as the pricing API
+	// reports it. Analytics stores it as `pools_involved`, read from the
+	// persisted build record, so dropping it here left that column empty on
+	// every chain this builder serves.
+	PoolAddresses []string `json:"poolAddresses,omitempty"`
+
 	// TargetExchange is the contract this leg's swap call targets
 	// (router/settlement), reported by firm-quote venues at pricing time so a
 	// post-mortem can attribute an on-chain revert to the venue contract.
